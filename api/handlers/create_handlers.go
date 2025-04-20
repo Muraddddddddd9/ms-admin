@@ -1,12 +1,14 @@
-package api
+package handlers
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
 	"log"
+	"ms-admin/api/services"
 
 	"github.com/gofiber/fiber/v2"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -29,15 +31,15 @@ func CreateData(c *fiber.Ctx, client *mongo.Client) error {
 
 	switch data.Collection {
 	case "students":
-		insertData, err = services.CreateStudent(db, data)
+		insertData, err = services.CreateStudent(db, data.NewData)
 	case "teachers":
-		insertData, err = services.CreateTeachers(db, data)
+		insertData, err = services.CreateTeachers(db, data.NewData)
 	case "groups":
-		insertData, err = services.CreateGroups(db, data)
+		insertData, err = services.CreateGroups(db, data.NewData)
 	case "objects":
-		insertData, err = services.CreateObjects(db, data)
+		insertData, err = services.CreateObjects(db, data.NewData)
 	case "objects_groups":
-		insertData, err = services.CreateObjectsGroups(db, data)
+		insertData, err = services.CreateObjectsGroups(db, data.NewData)
 	}
 
 	if err != nil {
@@ -55,7 +57,6 @@ func CreateData(c *fiber.Ctx, client *mongo.Client) error {
 	}
 
 	return c.Status(fiber.StatusAccepted).JSON(fiber.Map{
-		"message": fmt.Sprintf("Данные добавлены с ID: %v", collectionID),
+		"message": fmt.Sprintf("Данные добавлены с ID: %v", collectionID.InsertedID.(primitive.ObjectID).Hex()),
 	})
-	return nil
 }

@@ -19,12 +19,12 @@ func ConnectRedis() (*redis.Storage, error) {
 		log.Fatal(err)
 	}
 
-	store := redis.New(redis.Config{
+	storage := redis.New(redis.Config{
 		Host:     cfg.REDIS_HOST,
 		Port:     port,
 		Password: cfg.REDIS_PASSWORD,
 		Database: 0,
 	})
 
-	return store, nil
+	return storage, nil
 }
