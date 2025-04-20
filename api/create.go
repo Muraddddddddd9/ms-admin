@@ -8,6 +8,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -16,43 +17,46 @@ type Data struct {
 	NewData    json.RawMessage `json:"new_data"`
 }
 
-type Students struct {
-	Name       string   `bson:"name"`
-	Surname    string   `bson:"surname"`
-	Patronymic string   `bson:"patronymic,omitempty"`
-	Group      string   `bson:"group"`
-	Email      string   `bson:"email"`
-	Password   string   `bson:"password"`
-	Telegram   string   `bson:"telegram,omitempty"`
-	Diplomas   []string `bson:"diplomas,omitempty"`
-	Ips        []string `bson:"ips,omitempty"`
-	Status     string   `bson:"status"`
+
+func CreateTeachers(db *mongo.Database, data Data, insertData interface{}) error {
+	var teacher Teachers
+	if err := json.Unmarshal(data.NewData, &teacher); err != nil {
+		return fmt.Errorf("%v", "Неверные данные учителя")
+	}
+
+	err := checkReplica(db, data, bson.M{"email": teacher.Email})
+	if err != nil {
+		return fmt.Errorf("%v", err)
+	}
+
+	insertData = teacher
+	return nil
 }
 
-type Teachers struct {
-	Name       string   `bson:"name"`
-	Surname    string   `bson:"surname"`
-	Patronymic string   `bson:"patronymic,omitempty"`
-	Email      string   `bson:"email"`
-	Password   string   `bson:"password"`
-	Telegram   string   `bson:"telegram,omitempty"`
-	Ips        []string `bson:"ips,omitempty"`
-	Status     string   `bson:"status"`
-}
+func CreateGroups(db *mongo.Database, data Data, insertData interface{}) error {
+	var group Groups
+	if err := json.Unmarshal(data.NewData, &group); err != nil {
+		return fmt.Errorf("%v", "Неверные данные группы")
+	}
 
-type Groups struct {
-	Name       string `bson:"name"`
-	TeachersId string `bson:"teachers_id"`
-}
+	err := checkReplica(db, data, bson.M{"group": group.Group})
+	if err != nil {
+		return fmt.Errorf("%v", err)
+	}
 
-type Objects struct {
-	Name string `bson:"name"`
-}
+	group.TeachersId, err = primitive.ObjectIDFromHex(group.TeachersId.String())
+	if err != nil {
+		return fmt.Errorf("%s", err)
+	}
 
-type ObjectsForGroups struct {
-	NameId     string `json:"name_id"`
-	GroupId    string `json:"group_id"`
-	TeachersId string `json:"teachers_id"`
+	var findTeacher any
+	err = db.Collection("teachers").FindOne(context.TODO(), bson.M{"_id": group.TeachersId}).Decode(&findTeacher)
+	if err != nil {
+		return fmt.Errorf("%v", "Учитель не найден")
+	}
+
+	insertData = group
+	return nil
 }
 
 func CreateData(c *fiber.Ctx, client *mongo.Client) error {
@@ -63,39 +67,31 @@ func CreateData(c *fiber.Ctx, client *mongo.Client) error {
 		})
 	}
 
-	var insertData interface{}
-	var email string
-	var group_num string
-	var object_name string
+	db := client.Database("diary")
+	var insertData any
 
 	switch data.Collection {
 	case "students":
-		var student Students
-		if err := json.Unmarshal(data.NewData, &student); err != nil {
+		err := CreateStudent(db, data, &insertData)
+		if err != nil {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"message": "Неверные данные студента",
+				"message": err.Error(),
 			})
 		}
-		insertData = student
-		email = student.Email
 	case "teachers":
-		var teacher Teachers
-		if err := json.Unmarshal(data.NewData, &teacher); err != nil {
+		err := CreateTeachers(db, data, &insertData)
+		if err != nil {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"message": "Неверные данные учителя",
+				"message": err.Error(),
 			})
 		}
-		insertData = teacher
-		email = teacher.Email
 	case "groups":
-		var group Groups
-		if err := json.Unmarshal(data.NewData, &group); err != nil {
+		err := CreateGroups(db, data, &insertData)
+		if err != nil {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"message": "Неверные данные группы",
+				"message": err.Error(),
 			})
 		}
-		insertData = group
-		group_num = group.Name
 	case "objects":
 		var object Objects
 		if err := json.Unmarshal(data.NewData, &object); err != nil {
@@ -104,7 +100,12 @@ func CreateData(c *fiber.Ctx, client *mongo.Client) error {
 			})
 		}
 		insertData = object
-		object_name = object.Name
+		err := checkReplica(db, data, bson.M{"object": object.Object})
+		if err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"message": err.Error(),
+			})
+		}
 	case "objects_for_groups":
 		var objects_for_groups ObjectsForGroups
 		if err := json.Unmarshal(data.NewData, &objects_for_groups); err != nil {
@@ -113,43 +114,6 @@ func CreateData(c *fiber.Ctx, client *mongo.Client) error {
 			})
 		}
 		insertData = objects_for_groups
-	}
-
-	db := client.Database("diary")
-	if data.Collection == "students" || data.Collection == "teachers" {
-		filter := bson.M{
-			"email": email,
-		}
-		err := db.Collection(data.Collection).FindOne(context.TODO(), filter)
-		if err != nil {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"message": "Email уже существует",
-			})
-		}
-	}
-
-	if data.Collection == "groups" {
-		filter := bson.M{
-			"name": group_num,
-		}
-		err := db.Collection(data.Collection).FindOne(context.TODO(), filter)
-		if err != nil {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"message": "Группа уже существует",
-			})
-		}
-	}
-
-	if data.Collection == "objects" {
-		filter := bson.M{
-			"name": object_name,
-		}
-		err := db.Collection(data.Collection).FindOne(context.TODO(), filter)
-		if err != nil {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"message": "Предмет уже существует",
-			})
-		}
 	}
 
 	collectionID, err := db.Collection(data.Collection).InsertOne(context.TODO(), insertData)
@@ -163,4 +127,5 @@ func CreateData(c *fiber.Ctx, client *mongo.Client) error {
 	return c.Status(fiber.StatusAccepted).JSON(fiber.Map{
 		"message": fmt.Sprintf("Данные добавлены с ID: %v", collectionID),
 	})
+	return nil
 }

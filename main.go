@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"ms-admin/api"
+	"ms-admin/config"
 	"ms-admin/data"
 
 	"github.com/gofiber/fiber/v2"
@@ -23,6 +24,11 @@ func main() {
 	}
 	defer store.Close()
 
+	cfg, err := config.LoadConfig()
+	if err != nil {
+		log.Print(err)
+	}
+
 	app := fiber.New()
 
 	app.Use(cors.New(cors.Config{
@@ -37,4 +43,6 @@ func main() {
 	// app.Patch("/api/admin/update_data", func(c *fiber.Ctx) error {
 	// 	return
 	// })
+
+	app.Listen(cfg.PROJECT_PORT)
 }

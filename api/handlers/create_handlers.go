@@ -1,0 +1,61 @@
+package api
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"log"
+
+	"github.com/gofiber/fiber/v2"
+	"go.mongodb.org/mongo-driver/mongo"
+)
+
+type Data struct {
+	Collection string          `json:"collection"`
+	NewData    json.RawMessage `json:"new_data"`
+}
+
+func CreateData(c *fiber.Ctx, client *mongo.Client) error {
+	var data Data
+	if err := c.BodyParser(&data); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "Данные введены не верно",
+		})
+	}
+
+	db := client.Database("diary")
+	var insertData any
+	var err error
+
+	switch data.Collection {
+	case "students":
+		insertData, err = services.CreateStudent(db, data)
+	case "teachers":
+		insertData, err = services.CreateTeachers(db, data)
+	case "groups":
+		insertData, err = services.CreateGroups(db, data)
+	case "objects":
+		insertData, err = services.CreateObjects(db, data)
+	case "objects_groups":
+		insertData, err = services.CreateObjectsGroups(db, data)
+	}
+
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": err.Error(),
+		})
+	}
+
+	collectionID, err := db.Collection(data.Collection).InsertOne(context.TODO(), insertData)
+	if err != nil {
+		log.Print(err)
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "Данные не были добавлены",
+		})
+	}
+
+	return c.Status(fiber.StatusAccepted).JSON(fiber.Map{
+		"message": fmt.Sprintf("Данные добавлены с ID: %v", collectionID),
+	})
+	return nil
+}
