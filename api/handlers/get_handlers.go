@@ -7,10 +7,9 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-func GetData(c *fiber.Ctx, client *mongo.Client) error {
+func GetData(c *fiber.Ctx, db *mongo.Database) error {
 	collection := c.Params("collection")
 
-	db := client.Database("diary")
 	var data interface{}
 	var err error
 

@@ -45,6 +45,7 @@ func main() {
 		log.Println("Connect to MONGODB is succ")
 	}
 	defer client.Disconnect(context.TODO())
+	db := client.Database("diary")
 
 	storage, err := data.ConnectRedis()
 	if err == nil {
@@ -67,11 +68,19 @@ func main() {
 	}))
 
 	app.Post("/api/admin/create_data", AdminOnly(storage), func(c *fiber.Ctx) error {
-		return handlers.CreateData(c, client)
+		return handlers.CreateData(c, db)
 	})
 
-	app.Post("/api/admin/get_data/:collection", AdminOnly(storage), func(c *fiber.Ctx) error {
-		return handlers.GetData(c, client)
+	app.Get("/api/admin/get_data/:collection", AdminOnly(storage), func(c *fiber.Ctx) error {
+		return handlers.GetData(c, db)
+	})
+
+	app.Patch("/api/admin/upadte_data", AdminOnly(storage), func(c *fiber.Ctx) error {
+		return handlers.UpdateData(c, db)
+	})
+
+	app.Delete("/api/admin/delete_data", AdminOnly(storage), func(c *fiber.Ctx) error {
+		return handlers.DeleteData(c, db)
 	})
 
 	app.Listen(cfg.PROJECT_PORT)

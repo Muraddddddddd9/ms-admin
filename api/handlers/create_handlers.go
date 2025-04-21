@@ -12,20 +12,19 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-type Data struct {
+type CreateDataStruct struct {
 	Collection string          `json:"collection"`
 	NewData    json.RawMessage `json:"new_data"`
 }
 
-func CreateData(c *fiber.Ctx, client *mongo.Client) error {
-	var data Data
+func CreateData(c *fiber.Ctx, db *mongo.Database) error {
+	var data CreateDataStruct
 	if err := c.BodyParser(&data); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": "Данные введены не верно",
 		})
 	}
 
-	db := client.Database("diary")
 	var insertData any
 	var err error
 
