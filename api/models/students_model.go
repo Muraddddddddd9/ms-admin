@@ -13,10 +13,10 @@ type StudentsModel struct {
 	Telegram   string             `bson:"telegram" json:"telegram"`
 	Diplomas   []string           `bson:"diplomas" json:"diplomas"`
 	IPs        []string           `bson:"ips" json:"ips"`
-	Status     string             `bson:"status" json:"status"`
+	Status     primitive.ObjectID `bson:"status" json:"status"`
 }
 
-type StudentWithGroup struct {
+type StudentsWithGroupAndStatusModel struct {
 	ID         primitive.ObjectID `bson:"_id,omitempty" json:"_id,omitempty"`
 	Name       string             `bson:"name" json:"name"`
 	Surname    string             `bson:"surname" json:"surname"`

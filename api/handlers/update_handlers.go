@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"ms-admin/api/services"
 
 	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/bson"
@@ -23,6 +24,32 @@ func UpdateData(c *fiber.Ctx, db *mongo.Database) error {
 		})
 	}
 
+	var err error
+	switch data.Collection {
+	case "students", "teachers":
+		if data.Label == "email" || data.Label == "telegram" {
+			err = services.CheckReplica(db, data.Collection, bson.M{data.Label: data.NewData})
+		}
+	case "statuses":
+		if data.Label == "status" {
+			err = services.CheckReplica(db, data.Collection, bson.M{data.Label: data.NewData})
+		}
+	case "objects":
+		if data.Label == "object" {
+			err = services.CheckReplica(db, data.Collection, bson.M{data.Label: data.NewData})
+		}
+	case "groups":
+		if data.Label == "group" {
+			err = services.CheckReplica(db, data.Collection, bson.M{data.Label: data.NewData})
+		}
+	}
+
+	if err != nil {
+		return c.Status(fiber.StatusConflict).JSON(fiber.Map{
+			"message": err.Error(),
+		})
+	}
+
 	filter := bson.M{"_id": data.ID}
 	update := bson.M{
 		"$set": bson.M{
@@ -30,7 +57,7 @@ func UpdateData(c *fiber.Ctx, db *mongo.Database) error {
 		},
 	}
 
-	_, err := db.Collection(data.Collection).UpdateOne(context.TODO(), filter, update)
+	_, err = db.Collection(data.Collection).UpdateOne(context.TODO(), filter, update)
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"message": "Обновленние данных провалилась",

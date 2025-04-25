@@ -1,12 +1,14 @@
 package services
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"ms-admin/api/models"
 
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -16,8 +18,18 @@ var (
 
 func CreateGroups(db *mongo.Database, data json.RawMessage) (interface{}, error) {
 	var group models.GroupsModel
-	if err := json.Unmarshal(data, &group); err != nil {
-		return nil, fmt.Errorf("%s", "Неверные данные группы")
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&group); err != nil {
+		return nil, fmt.Errorf("%v: %v", "Неверные данные группы", err)
+	}
+
+	if group.Group == "" {
+		return nil, fmt.Errorf("поле 'group' не может быть пустым")
+	}
+	
+	if group.Teacher == primitive.NilObjectID {
+		return nil, fmt.Errorf("поле 'teacher' не может быть пустым")
 	}
 
 	err := CheckReplica(db, GroupCollection, bson.M{"group": group.Group})
@@ -26,7 +38,7 @@ func CreateGroups(db *mongo.Database, data json.RawMessage) (interface{}, error)
 	}
 
 	var findTeacher any
-	err = db.Collection(TeacherCollection).FindOne(context.TODO(), bson.M{"_id": group.TeacherId}).Decode(&findTeacher)
+	err = db.Collection(TeacherCollection).FindOne(context.TODO(), bson.M{"_id": group.Teacher}).Decode(&findTeacher)
 	if err != nil {
 		return nil, fmt.Errorf("%s", "Учитель не найден")
 	}
@@ -34,12 +46,12 @@ func CreateGroups(db *mongo.Database, data json.RawMessage) (interface{}, error)
 	return group, nil
 }
 
-func ReadGroups(db *mongo.Database) (interface{}, error) {
+func ReadGroups(db *mongo.Database) (interface{}, []string, interface{}, error) {
 	pipline := []bson.M{
 		{
 			"$lookup": bson.M{
 				"from":         "teachers",
-				"localField":   "teacher_id",
+				"localField":   "teacher",
 				"foreignField": "_id",
 				"as":           "teacherData",
 			},
@@ -49,9 +61,9 @@ func ReadGroups(db *mongo.Database) (interface{}, error) {
 		},
 		{
 			"$project": bson.M{
-				"_id":        1,
-				"group":      1,
-				"teacher_id": bson.M{
+				"_id":   1,
+				"group": 1,
+				"teacher": bson.M{
 					"$concat": bson.A{
 						"$teacherData.name",
 						" ",
@@ -66,14 +78,24 @@ func ReadGroups(db *mongo.Database) (interface{}, error) {
 
 	cursor, err := db.Collection(GroupCollection).Aggregate(context.TODO(), pipline)
 	if err != nil {
-		return nil, fmt.Errorf("%v", err)
+		return nil, nil, nil, fmt.Errorf("%v", err)
 	}
 	defer cursor.Close(context.TODO())
 
-	var results []models.GroupWithTeacher
+	var results []models.GroupsWithTeacherModel
 	if err = cursor.All(context.TODO(), &results); err != nil {
-		return nil, fmt.Errorf("%v", err)
+		return nil, nil, nil, fmt.Errorf("%v", err)
 	}
 
-	return results, nil
+	var structForHead models.GroupsWithTeacherModel
+	header := GetFieldNames(structForHead)
+	header = FilterHeaders(header, []string{"ID"})
+
+	var selectResult models.SelectModels
+	err = SelectData(db, TeacherCollection, &selectResult)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("%v", err)
+	}
+
+	return results, header, selectResult, nil
 }

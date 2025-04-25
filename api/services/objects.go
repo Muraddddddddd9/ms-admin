@@ -1,6 +1,7 @@
 package services
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -16,10 +17,17 @@ var (
 
 func CreateObjects(db *mongo.Database, data json.RawMessage) (interface{}, error) {
 	var object models.ObjectsModel
-	if err := json.Unmarshal(data, &object); err != nil {
-		return nil, fmt.Errorf("%s", "Неверные данные предмета")
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+
+	if err := decoder.Decode(&object); err != nil {
+		return nil, fmt.Errorf("%v: %v", "Неверные данные предмета", err)
 	}
 
+	if object.Object == "" {
+		return nil, fmt.Errorf("поле 'object' не может быть пустым")
+	}
+	
 	err := CheckReplica(db, ObjectCollection, bson.M{"object": object.Object})
 	if err != nil {
 		return nil, fmt.Errorf("%s", err)
@@ -28,18 +36,21 @@ func CreateObjects(db *mongo.Database, data json.RawMessage) (interface{}, error
 	return object, nil
 }
 
-func ReadObjects(db *mongo.Database) (interface{}, error) {
+func ReadObjects(db *mongo.Database) (interface{}, []string, error) {
 	cursor, err := db.Collection(ObjectCollection).Find(context.TODO(), bson.M{})
 	if err != nil {
-		return nil, fmt.Errorf("%v", err)
+		return nil, nil, fmt.Errorf("%v", err)
 	}
 	defer cursor.Close(context.TODO())
 
 	var results []models.ObjectsModel
 	err = cursor.All(context.TODO(), &results)
 	if err != nil {
-		return nil, fmt.Errorf("%v", err)
+		return nil, nil, fmt.Errorf("%v", err)
 	}
+	var structForHead models.ObjectsModel
+	header := GetFieldNames(structForHead)
+	header = FilterHeaders(header, []string{"ID"})
 
-	return results, nil
+	return results, header, nil
 }

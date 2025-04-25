@@ -11,19 +11,23 @@ func GetData(c *fiber.Ctx, db *mongo.Database) error {
 	collection := c.Params("collection")
 
 	var data interface{}
+	var selectData interface{}
+	var header []string
 	var err error
 
 	switch collection {
 	case "students":
-		data, err = services.ReadStudent(db)
+		data, header, selectData, err = services.ReadStudents(db)
 	case "teachers":
-		data, err = services.ReadTeachers(db)
+		data, header, selectData, err = services.ReadTeachers(db)
 	case "groups":
-		data, err = services.ReadGroups(db)
+		data, header, selectData, err = services.ReadGroups(db)
 	case "objects":
-		data, err = services.ReadObjects(db)
+		data, header, err = services.ReadObjects(db)
 	case "objects_groups":
-		data, err = services.ReadObjectsGroups(db)
+		data, header, selectData, err = services.ReadObjectsGroups(db)
+	case "statuses":
+		data, header, err = services.ReadStatuses(db)
 	}
 
 	if err != nil {
@@ -33,6 +37,8 @@ func GetData(c *fiber.Ctx, db *mongo.Database) error {
 	}
 
 	return c.Status(fiber.StatusAccepted).JSON(fiber.Map{
-		"data": data,
+		"data":       data,
+		"header":     header,
+		"selectData": selectData,
 	})
 }

@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"fmt"
+	"ms-admin/api/services"
 
 	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/bson"
@@ -14,7 +15,6 @@ func DeleteData(c *fiber.Ctx, db *mongo.Database) error {
 	var deleteData struct {
 		ID         []primitive.ObjectID `bson:"_id" json:"_id"`
 		Collection string               `bson:"collection" json:"collection"`
-		Test       []string             `bson:"test" json:"test"`
 	}
 
 	if err := c.BodyParser(&deleteData); err != nil {
@@ -23,14 +23,57 @@ func DeleteData(c *fiber.Ctx, db *mongo.Database) error {
 		})
 	}
 
-	fmt.Print(deleteData)
+	var countNoneDelete int = 0
+	var errFind error
+
 	for _, v := range deleteData.ID {
 		filter := bson.M{
 			"_id": v,
 		}
-		result, err := db.Collection(deleteData.Collection).DeleteOne(context.TODO(), filter)
-		fmt.Print(result, err)
 
+		switch deleteData.Collection {
+		case "groups":
+			errFind = services.CheckDataOtherTable(db, "students", bson.M{"group": v})
+			if errFind != nil {
+				countNoneDelete++
+				continue
+			}
+			errFind = services.CheckDataOtherTable(db, "objects_groups", bson.M{"group": v})
+			if errFind != nil {
+				countNoneDelete++
+				continue
+			}
+		case "teachers":
+			errFind = services.CheckDataOtherTable(db, "groups", bson.M{"teacher": v})
+			if errFind != nil {
+				countNoneDelete++
+				continue
+			}
+			errFind = services.CheckDataOtherTable(db, "objects_groups", bson.M{"teacher": v})
+			if errFind != nil {
+				countNoneDelete++
+				continue
+			}
+		case "statuses":
+			errFind = services.CheckDataOtherTable(db, "students", bson.M{"status": v})
+			if errFind != nil {
+				countNoneDelete++
+				continue
+			}
+			errFind = services.CheckDataOtherTable(db, "teachers", bson.M{"status": v})
+			if errFind != nil {
+				countNoneDelete++
+				continue
+			}
+		case "objects":
+			errFind = services.CheckDataOtherTable(db, "objects_groups", bson.M{"object": v})
+			if errFind != nil {
+				countNoneDelete++
+				continue
+			}
+		}
+
+		_, err := db.Collection(deleteData.Collection).DeleteOne(context.TODO(), filter)
 		if err != nil {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 				"message": "Ошибка в удаление",
@@ -38,7 +81,13 @@ func DeleteData(c *fiber.Ctx, db *mongo.Database) error {
 		}
 	}
 
+	if countNoneDelete >= 1 {
+		return c.Status(fiber.StatusConflict).JSON(fiber.Map{
+			"message": fmt.Sprint(errFind),
+		})
+	}
+
 	return c.Status(fiber.StatusAccepted).JSON(fiber.Map{
-		"messsage": "Данные были удалены",
+		"message": fmt.Sprintf("Было удалено %v из %v", len(deleteData.ID)-countNoneDelete, len(deleteData.ID)),
 	})
 }

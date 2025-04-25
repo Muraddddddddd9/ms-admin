@@ -1,6 +1,7 @@
 package services
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -14,10 +15,33 @@ var (
 	StidentCollection = "students"
 )
 
-func CreateStudent(db *mongo.Database, data json.RawMessage) (interface{}, error) {
+func CreateStudents(db *mongo.Database, data json.RawMessage) (interface{}, error) {
 	var student models.StudentsModel
-	if err := json.Unmarshal(data, &student); err != nil {
-		return nil, fmt.Errorf("%s", "Неверные данные студента")
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	
+	if err := decoder.Decode(&student); err != nil {
+		return nil, fmt.Errorf("%v: %v", "Неверные данные студента", err)
+	}
+
+	if student.Name == "" {
+		return nil, fmt.Errorf("поле 'name' не может быть пустым")
+	}
+
+	if student.Surname == "" {
+		return nil, fmt.Errorf("поле 'surname' не может быть пустым")
+	}
+	
+	if student.Patronymic == "" {
+		return nil, fmt.Errorf("поле 'patronymic' не может быть пустым")
+	}
+
+	if student.Email == "" {
+		return nil, fmt.Errorf("поле 'email' не может быть пустым")
+	}
+
+	if student.Password == "" {
+		return nil, fmt.Errorf("поле 'password' не может быть пустым")
 	}
 
 	err := CheckReplica(db, StidentCollection, bson.M{"email": student.Email})
@@ -26,15 +50,21 @@ func CreateStudent(db *mongo.Database, data json.RawMessage) (interface{}, error
 	}
 
 	var findGroup any
-	err = db.Collection("groups").FindOne(context.TODO(), bson.M{"_id": student.Group}).Decode(&findGroup)
+	err = db.Collection(GroupCollection).FindOne(context.TODO(), bson.M{"_id": student.Group}).Decode(&findGroup)
 	if err != nil {
 		return nil, fmt.Errorf("%s", "Группа не найдена")
+	}
+
+	var findStatus any
+	err = db.Collection(StatusCollection).FindOne(context.TODO(), bson.M{"_id": student.Status}).Decode(&findStatus)
+	if err != nil {
+		return nil, fmt.Errorf("%s", "Статус не найдена")
 	}
 
 	return student, nil
 }
 
-func ReadStudent(db *mongo.Database) (interface{}, error) {
+func ReadStudents(db *mongo.Database) (interface{}, []string, interface{}, error) {
 	pipeline := []bson.M{
 		{
 			"$lookup": bson.M{
@@ -45,7 +75,18 @@ func ReadStudent(db *mongo.Database) (interface{}, error) {
 			},
 		},
 		{
+			"$lookup": bson.M{
+				"from":         "statuses",
+				"localField":   "status",
+				"foreignField": "_id",
+				"as":           "statusData",
+			},
+		},
+		{
 			"$unwind": "$groupData",
+		},
+		{
+			"$unwind": "$statusData",
 		},
 		{
 			"$project": bson.M{
@@ -58,21 +99,36 @@ func ReadStudent(db *mongo.Database) (interface{}, error) {
 				"telegram":   1,
 				"diplomas":   1,
 				"ips":        1,
-				"status":     1,
+				"status":     "$statusData.status",
 			},
 		},
 	}
 
 	cursor, err := db.Collection(StidentCollection).Aggregate(context.TODO(), pipeline)
 	if err != nil {
-		return nil, fmt.Errorf("%v", err)
+		return nil, nil, nil, fmt.Errorf("%v", err)
 	}
 	defer cursor.Close(context.TODO())
 
-	var results []models.StudentWithGroup
+	var results []models.StudentsWithGroupAndStatusModel
 	if err = cursor.All(context.TODO(), &results); err != nil {
-		return nil, fmt.Errorf("%v", err)
+		return nil, nil, nil, fmt.Errorf("%v", err)
 	}
 
-	return results, nil
+	var structForHead models.StudentsWithGroupAndStatusModel
+	header := GetFieldNames(structForHead)
+	header = FilterHeaders(header, []string{"ID", "Telegram", "Diplomas", "IPs"})
+
+	var selectResult models.SelectModels
+	err = SelectData(db, GroupCollection, &selectResult)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("%v", err)
+	}
+
+	err = SelectData(db, StatusCollection, &selectResult)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("%v", err)
+	}
+
+	return results, header, selectResult, nil
 }

@@ -1,6 +1,7 @@
 package services
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -16,29 +17,32 @@ var (
 
 func CreateObjectsGroups(db *mongo.Database, data json.RawMessage) (interface{}, error) {
 	var objectsGroups models.ObjectsGroupsModel
-	if err := json.Unmarshal(data, &objectsGroups); err != nil {
-		return nil, fmt.Errorf("%s", "Неверные данные предмета для группы")
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+
+	if err := decoder.Decode(&objectsGroups); err != nil {
+		return nil, fmt.Errorf("%v: %v", "Неверные данные предмета для группы", err)
 	}
 
-	err := CheckReplica(db, ObjectGroupCollection, bson.M{"object": objectsGroups.ObjectId})
+	err := CheckReplica(db, ObjectGroupCollection, bson.M{"object": objectsGroups.Object})
 	if err != nil {
 		return nil, fmt.Errorf("%s", err)
 	}
 
 	var findObject any
-	err = db.Collection(ObjectCollection).FindOne(context.TODO(), bson.M{"_id": objectsGroups.ObjectId}).Decode(&findObject)
+	err = db.Collection(ObjectCollection).FindOne(context.TODO(), bson.M{"_id": objectsGroups.Object}).Decode(&findObject)
 	if err != nil {
 		return nil, fmt.Errorf("%s", "Предмет не найдена")
 	}
 
 	var findGroup any
-	err = db.Collection(GroupCollection).FindOne(context.TODO(), bson.M{"_id": objectsGroups.GroupId}).Decode(&findGroup)
+	err = db.Collection(GroupCollection).FindOne(context.TODO(), bson.M{"_id": objectsGroups.Group}).Decode(&findGroup)
 	if err != nil {
 		return nil, fmt.Errorf("%s", "Группа не найдена")
 	}
 
 	var findTeacher any
-	err = db.Collection(TeacherCollection).FindOne(context.TODO(), bson.M{"_id": objectsGroups.TeacherId}).Decode(&findTeacher)
+	err = db.Collection(TeacherCollection).FindOne(context.TODO(), bson.M{"_id": objectsGroups.Teacher}).Decode(&findTeacher)
 	if err != nil {
 		return nil, fmt.Errorf("%s", "Учитель не найдена")
 	}
@@ -46,12 +50,12 @@ func CreateObjectsGroups(db *mongo.Database, data json.RawMessage) (interface{},
 	return objectsGroups, nil
 }
 
-func ReadObjectsGroups(db *mongo.Database) (interface{}, error) {
+func ReadObjectsGroups(db *mongo.Database) (interface{}, []string, interface{}, error) {
 	pipline := []bson.M{
 		{
 			"$lookup": bson.M{
 				"from":         "objects",
-				"localField":   "object_id",
+				"localField":   "object",
 				"foreignField": "_id",
 				"as":           "objectsData",
 			},
@@ -59,7 +63,7 @@ func ReadObjectsGroups(db *mongo.Database) (interface{}, error) {
 		{
 			"$lookup": bson.M{
 				"from":         "groups",
-				"localField":   "group_id",
+				"localField":   "group",
 				"foreignField": "_id",
 				"as":           "groupsData",
 			},
@@ -67,7 +71,7 @@ func ReadObjectsGroups(db *mongo.Database) (interface{}, error) {
 		{
 			"$lookup": bson.M{
 				"from":         "teachers",
-				"localField":   "teacher_id",
+				"localField":   "teacher",
 				"foreignField": "_id",
 				"as":           "teachersData",
 			},
@@ -83,10 +87,10 @@ func ReadObjectsGroups(db *mongo.Database) (interface{}, error) {
 		},
 		{
 			"$project": bson.M{
-				"_id":       1,
-				"object_id": "$objectsData.object",
-				"group_id":  "$groupsData.group",
-				"teacher_id": bson.M{
+				"_id":    1,
+				"object": "$objectsData.object",
+				"group":  "$groupsData.group",
+				"teacher": bson.M{
 					"$concat": bson.A{
 						"$teachersData.name",
 						" ",
@@ -101,15 +105,35 @@ func ReadObjectsGroups(db *mongo.Database) (interface{}, error) {
 
 	cursor, err := db.Collection(ObjectGroupCollection).Aggregate(context.TODO(), pipline)
 	if err != nil {
-		return nil, fmt.Errorf("%v", err)
+		return nil, nil, nil, fmt.Errorf("%v", err)
 	}
 	defer cursor.Close(context.TODO())
 
 	var results []models.ObjectsGroupsWithGroupAndTeacherModel
 	err = cursor.All(context.TODO(), &results)
 	if err != nil {
-		return nil, fmt.Errorf("%v", err)
+		return nil, nil, nil, fmt.Errorf("%v", err)
 	}
 
-	return results, nil
+	var structForHead models.ObjectsGroupsWithGroupAndTeacherModel
+	header := GetFieldNames(structForHead)
+	header = FilterHeaders(header, []string{"ID"})
+
+	var selectResult models.SelectModels
+	err = SelectData(db, ObjectCollection, &selectResult)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("%v", err)
+	}
+
+	err = SelectData(db, GroupCollection, &selectResult)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("%v", err)
+	}
+
+	err = SelectData(db, TeacherCollection, &selectResult)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("%v", err)
+	}
+
+	return results, header, selectResult, nil
 }

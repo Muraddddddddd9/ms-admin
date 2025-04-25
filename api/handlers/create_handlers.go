@@ -30,7 +30,7 @@ func CreateData(c *fiber.Ctx, db *mongo.Database) error {
 
 	switch data.Collection {
 	case "students":
-		insertData, err = services.CreateStudent(db, data.NewData)
+		insertData, err = services.CreateStudents(db, data.NewData)
 	case "teachers":
 		insertData, err = services.CreateTeachers(db, data.NewData)
 	case "groups":
@@ -39,6 +39,8 @@ func CreateData(c *fiber.Ctx, db *mongo.Database) error {
 		insertData, err = services.CreateObjects(db, data.NewData)
 	case "objects_groups":
 		insertData, err = services.CreateObjectsGroups(db, data.NewData)
+	case "statuses":
+		insertData, err = services.CreateStatuses(db, data.NewData)
 	}
 
 	if err != nil {
