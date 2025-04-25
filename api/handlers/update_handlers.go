@@ -25,6 +25,7 @@ func UpdateData(c *fiber.Ctx, db *mongo.Database) error {
 	}
 
 	var err error
+
 	switch data.Collection {
 	case "students", "teachers":
 		if data.Label == "email" || data.Label == "telegram" {
@@ -49,12 +50,25 @@ func UpdateData(c *fiber.Ctx, db *mongo.Database) error {
 			"message": err.Error(),
 		})
 	}
-
 	filter := bson.M{"_id": data.ID}
-	update := bson.M{
-		"$set": bson.M{
-			data.Label: data.NewData,
-		},
+	var update bson.M
+
+	if data.Label == "group" && data.Collection != "groups" ||
+		data.Label == "status" && data.Collection != "statuses" ||
+		data.Label == "object" && data.Collection == "objects_groups" ||
+		data.Label == "teacher" {
+		newData, _ := primitive.ObjectIDFromHex(data.NewData)
+		update = bson.M{
+			"$set": bson.M{
+				data.Label: newData,
+			},
+		}
+	} else {
+		update = bson.M{
+			"$set": bson.M{
+				data.Label: data.NewData,
+			},
+		}
 	}
 
 	_, err = db.Collection(data.Collection).UpdateOne(context.TODO(), filter, update)
