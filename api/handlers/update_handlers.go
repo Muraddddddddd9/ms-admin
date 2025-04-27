@@ -8,6 +8,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func UpdateData(c *fiber.Ctx, db *mongo.Database) error {
@@ -30,6 +31,11 @@ func UpdateData(c *fiber.Ctx, db *mongo.Database) error {
 	case "students", "teachers":
 		if data.Label == "email" || data.Label == "telegram" {
 			err = services.CheckReplica(db, data.Collection, bson.M{data.Label: data.NewData})
+		}
+
+		if data.Label == "password" {
+			bcryptPassword, _ := bcrypt.GenerateFromPassword([]byte(data.NewData), bcrypt.DefaultCost)
+			data.NewData = string(bcryptPassword)
 		}
 	case "statuses":
 		if data.Label == "status" {

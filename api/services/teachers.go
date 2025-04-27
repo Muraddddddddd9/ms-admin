@@ -9,6 +9,7 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
+	"golang.org/x/crypto/bcrypt"
 )
 
 var (
@@ -28,6 +29,9 @@ func CreateTeachers(db *mongo.Database, data json.RawMessage) (interface{}, erro
 	if err != nil {
 		return nil, fmt.Errorf("%s", err)
 	}
+
+	bcryptPassword, _ := bcrypt.GenerateFromPassword([]byte(teacher.Password), bcrypt.DefaultCost)
+	teacher.Password = string(bcryptPassword)
 
 	return teacher, nil
 }

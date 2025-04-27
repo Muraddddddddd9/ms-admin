@@ -20,6 +20,9 @@ type Config struct {
 	REDIS_HOST     string
 	REDIS_PORT     string
 	REDIS_PASSWORD string
+
+	ADMIN_EMAIL    string
+	ADMIN_PASSWORD string
 }
 
 func LoadConfig() (*Config, error) {
@@ -41,5 +44,8 @@ func LoadConfig() (*Config, error) {
 		REDIS_HOST:     os.Getenv("REDIS_HOST"),
 		REDIS_PORT:     os.Getenv("REDIS_PORT"),
 		REDIS_PASSWORD: os.Getenv("REDIS_PASSWORD"),
+
+		ADMIN_EMAIL:    os.Getenv("ADMIN_EMAIL"),
+		ADMIN_PASSWORD: os.Getenv("ADMIN_PASSWORD"),
 	}, nil
 }

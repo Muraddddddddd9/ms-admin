@@ -9,6 +9,7 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
+	"golang.org/x/crypto/bcrypt"
 )
 
 var (
@@ -19,7 +20,7 @@ func CreateStudents(db *mongo.Database, data json.RawMessage) (interface{}, erro
 	var student models.StudentsModel
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	decoder.DisallowUnknownFields()
-	
+
 	if err := decoder.Decode(&student); err != nil {
 		return nil, fmt.Errorf("%v: %v", "Неверные данные студента", err)
 	}
@@ -31,7 +32,7 @@ func CreateStudents(db *mongo.Database, data json.RawMessage) (interface{}, erro
 	if student.Surname == "" {
 		return nil, fmt.Errorf("поле 'surname' не может быть пустым")
 	}
-	
+
 	if student.Patronymic == "" {
 		return nil, fmt.Errorf("поле 'patronymic' не может быть пустым")
 	}
@@ -48,6 +49,9 @@ func CreateStudents(db *mongo.Database, data json.RawMessage) (interface{}, erro
 	if err != nil {
 		return nil, fmt.Errorf("%s", err)
 	}
+
+	bcryptPassword, _ := bcrypt.GenerateFromPassword([]byte(student.Password), bcrypt.DefaultCost)
+	student.Password = string(bcryptPassword)
 
 	var findGroup any
 	err = db.Collection(GroupCollection).FindOne(context.TODO(), bson.M{"_id": student.Group}).Decode(&findGroup)
