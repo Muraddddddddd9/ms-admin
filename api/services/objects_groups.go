@@ -24,7 +24,7 @@ func CreateObjectsGroups(db *mongo.Database, data json.RawMessage) (interface{},
 		return nil, fmt.Errorf("%v: %v", "Неверные данные предмета для группы", err)
 	}
 
-	err := CheckReplica(db, ObjectGroupCollection, bson.M{"object": objectsGroups.Object})
+	err := CheckReplica(db, ObjectGroupCollection, bson.M{"object": objectsGroups.Object, "group": objectsGroups.Group})
 	if err != nil {
 		return nil, fmt.Errorf("%s", err)
 	}

@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"ms-admin/api/services"
 
 	"github.com/gofiber/fiber/v2"
@@ -44,6 +43,7 @@ func CreateData(c *fiber.Ctx, db *mongo.Database) error {
 	}
 
 	if err != nil {
+		services.Logging(db, "/api/admin/create_data", "POST", "400", json.Unmarshal(data.NewData, &data.NewData), err.Error())
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": err.Error(),
 		})
@@ -51,12 +51,13 @@ func CreateData(c *fiber.Ctx, db *mongo.Database) error {
 
 	collectionID, err := db.Collection(data.Collection).InsertOne(context.TODO(), insertData)
 	if err != nil {
-		log.Print(err)
+		services.Logging(db, "/api/admin/create_data", "POST", "400", json.Unmarshal(data.NewData, &data.NewData), err.Error())
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": "Данные не были добавлены",
 		})
 	}
 
+	services.Logging(db, "/api/admin/create_data", "POST", "202", insertData, nil)
 	return c.Status(fiber.StatusAccepted).JSON(fiber.Map{
 		"message": fmt.Sprintf("Данные добавлены с ID: %v", collectionID.InsertedID.(primitive.ObjectID).Hex()),
 	})

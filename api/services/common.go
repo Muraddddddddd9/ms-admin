@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"ms-admin/api/models"
 	"reflect"
+	"time"
 
+	"github.com/gofiber/fiber/v2/log"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -83,13 +85,28 @@ func SelectData(db *mongo.Database, collection string, selectResult *models.Sele
 }
 
 func CheckDataOtherTable(db *mongo.Database, collection string, filter bson.M) error {
-    err := db.Collection(collection).FindOne(context.TODO(), filter).Err()
-    if err == nil {
-        return fmt.Errorf("Данные находятся в коллекции %s", collection)
-    }
-    if err == mongo.ErrNoDocuments {
-        return nil
-    }
-    
-    return err
+	err := db.Collection(collection).FindOne(context.TODO(), filter).Err()
+	if err == nil {
+		return fmt.Errorf("Данные находятся в коллекции %s", collection)
+	}
+	if err == mongo.ErrNoDocuments {
+		return nil
+	}
+
+	return err
+}
+
+func Logging(db *mongo.Database, api, method, status string, data any, errData any) {
+	document := models.Log{
+		API:    api,
+		Method: method,
+		Status: status,
+		Data:   data,
+		Date:   time.Now().Local().Format("2006-01-02 15:04:05 MST"),
+		Error:  errData,
+	}
+	_, err := db.Collection("log").InsertOne(context.TODO(), document)
+	if err != nil {
+		log.Errorf("Ошибка в логгирование данных")
+	}
 }

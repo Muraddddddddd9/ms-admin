@@ -15,10 +15,8 @@ import (
 )
 
 func AdminOnly(storage *redis.Storage) fiber.Handler {
-	
-	return func(c *fiber.Ctx) error {
-		return c.Next()
 
+	return func(c *fiber.Ctx) error {
 		session_id := c.Cookies("session_id")
 
 		body, err := storage.Get(fmt.Sprintf("users:%v", session_id))
@@ -66,7 +64,7 @@ func main() {
 	app.Use(cors.New(cors.Config{
 		AllowOrigins:     "http://localhost:5173",
 		AllowHeaders:     "Origin, Content-Type, Accept",
-		AllowMethods:     "GET, POST, PUT, PATCH, DELETE",
+		AllowMethods:     "GET, POST, PATCH, DELETE",
 		AllowCredentials: true,
 	}))
 

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"ms-admin/api/services"
 
 	"github.com/gofiber/fiber/v2"
@@ -28,9 +29,12 @@ func GetData(c *fiber.Ctx, db *mongo.Database) error {
 		data, header, selectData, err = services.ReadObjectsGroups(db)
 	case "statuses":
 		data, header, err = services.ReadStatuses(db)
+	case "logs":
+		data, header, err = services.ReadLogs(db)
 	}
 
 	if err != nil {
+		services.Logging(db, fmt.Sprintf("/api/admin/get_data/%v", collection), "GET", "400", data, err.Error())
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": err.Error(),
 		})

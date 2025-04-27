@@ -46,6 +46,7 @@ func UpdateData(c *fiber.Ctx, db *mongo.Database) error {
 	}
 
 	if err != nil {
+		services.Logging(db, "/api/admin/update_data", "POST", "409", data, err.Error())
 		return c.Status(fiber.StatusConflict).JSON(fiber.Map{
 			"message": err.Error(),
 		})
@@ -73,11 +74,13 @@ func UpdateData(c *fiber.Ctx, db *mongo.Database) error {
 
 	_, err = db.Collection(data.Collection).UpdateOne(context.TODO(), filter, update)
 	if err != nil {
+		services.Logging(db, "/api/admin/update_data", "POST", "404", data, err)
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"message": "Обновленние данных провалилась",
 		})
 	}
 
+	services.Logging(db, "/api/admin/update_data", "POST", "202", data, nil)
 	return c.Status(fiber.StatusAccepted).JSON(fiber.Map{
 		"message": "Данные обновлены",
 	})
