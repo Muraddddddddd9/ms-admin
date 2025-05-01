@@ -50,6 +50,9 @@ func CreateStudents(db *mongo.Database, data json.RawMessage) (interface{}, erro
 		return nil, fmt.Errorf("%s", err)
 	}
 
+	student.Diplomas = []string{}
+	student.IPs = []string{}
+
 	bcryptPassword, _ := bcrypt.GenerateFromPassword([]byte(student.Password), bcrypt.DefaultCost)
 	student.Password = string(bcryptPassword)
 

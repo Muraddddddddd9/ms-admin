@@ -30,6 +30,8 @@ func CreateTeachers(db *mongo.Database, data json.RawMessage) (interface{}, erro
 		return nil, fmt.Errorf("%s", err)
 	}
 
+	teacher.IPs = []string{}
+
 	bcryptPassword, _ := bcrypt.GenerateFromPassword([]byte(teacher.Password), bcrypt.DefaultCost)
 	teacher.Password = string(bcryptPassword)
 

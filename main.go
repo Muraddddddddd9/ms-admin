@@ -60,6 +60,7 @@ func CreateStartAdmin(db *mongo.Database, cfg *config.Config) error {
 				Patronymic: "Admin",
 				Email:      cfg.ADMIN_EMAIL,
 				Password:   string(hashedPassword),
+				IPs:        []string{},
 				Status:     statusDoc["_id"].(primitive.ObjectID),
 			}
 
