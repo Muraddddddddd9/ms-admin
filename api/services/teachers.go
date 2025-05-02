@@ -5,8 +5,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"ms-admin/api/models"
 
+	"github.com/Muraddddddddd9/ms-database/data/mongodb"
+	"github.com/Muraddddddddd9/ms-database/models"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"golang.org/x/crypto/bcrypt"
@@ -18,11 +19,25 @@ var (
 
 func CreateTeachers(db *mongo.Database, data json.RawMessage) (interface{}, error) {
 	var teacher models.TeachersModel
+
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	decoder.DisallowUnknownFields()
-
 	if err := decoder.Decode(&teacher); err != nil {
 		return nil, fmt.Errorf("%v: %v", "Неверные данные учителя", err)
+	}
+
+	fields := map[string]string{
+		"name":       teacher.Name,
+		"surname":    teacher.Surname,
+		"patronymic": teacher.Patronymic,
+		"email":      teacher.Email,
+		"password":   teacher.Password,
+	}
+
+	for name, value := range fields {
+		if value == "" {
+			return nil, fmt.Errorf("поле '%s' не может быть пустым", name)
+		}
 	}
 
 	err := CheckReplica(db, TeacherCollection, bson.M{"email": teacher.Email})
@@ -35,7 +50,19 @@ func CreateTeachers(db *mongo.Database, data json.RawMessage) (interface{}, erro
 	bcryptPassword, _ := bcrypt.GenerateFromPassword([]byte(teacher.Password), bcrypt.DefaultCost)
 	teacher.Password = string(bcryptPassword)
 
-	return teacher, nil
+	statusRepo := mongodb.NewRepository[models.StatusesModel, interface{}](db.Collection(StatusCollection))
+	_, err = statusRepo.FindOne(context.Background(), bson.M{"_id": teacher.Status})
+	if err != nil {
+		return nil, fmt.Errorf("%s", "Статус не найдена")
+	}
+
+	teacherRepo := mongodb.NewRepository[models.TeachersModel, models.TeachersWithStatusModel](db.Collection(TeacherCollection))
+	teacherId, err := teacherRepo.InsertOne(context.Background(), &teacher)
+	if err != nil {
+		return nil, err
+	}
+
+	return teacherId, nil
 }
 
 func ReadTeachers(db *mongo.Database) (interface{}, []string, interface{}, error) {
@@ -65,15 +92,10 @@ func ReadTeachers(db *mongo.Database) (interface{}, []string, interface{}, error
 		},
 	}
 
-	cursor, err := db.Collection(TeacherCollection).Aggregate(context.TODO(), pipeline)
+	teacherRepo := mongodb.NewRepository[models.TeachersModel, models.TeachersWithStatusModel](db.Collection(TeacherCollection))
+	teacherAggregate, err := teacherRepo.AggregateAll(context.Background(), pipeline)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("%v", err)
-	}
-	defer cursor.Close(context.TODO())
-
-	var results []models.TeachersWithStatusModel
-	if err = cursor.All(context.TODO(), &results); err != nil {
-		return nil, nil, nil, fmt.Errorf("%v", err)
+		return nil, nil, nil, err
 	}
 
 	var structForHead models.TeachersWithStatusModel
@@ -86,5 +108,5 @@ func ReadTeachers(db *mongo.Database) (interface{}, []string, interface{}, error
 		return nil, nil, nil, fmt.Errorf("%v", err)
 	}
 
-	return results, header, selectResult, nil
+	return teacherAggregate, header, selectResult, nil
 }

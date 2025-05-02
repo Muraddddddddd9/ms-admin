@@ -5,8 +5,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"ms-admin/api/models"
 
+	"github.com/Muraddddddddd9/ms-database/data/mongodb"
+	"github.com/Muraddddddddd9/ms-database/models"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -17,9 +18,9 @@ var (
 
 func CreateObjectsGroups(db *mongo.Database, data json.RawMessage) (interface{}, error) {
 	var objectsGroups models.ObjectsGroupsModel
+
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	decoder.DisallowUnknownFields()
-
 	if err := decoder.Decode(&objectsGroups); err != nil {
 		return nil, fmt.Errorf("%v: %v", "Неверные данные предмета для группы", err)
 	}
@@ -29,29 +30,35 @@ func CreateObjectsGroups(db *mongo.Database, data json.RawMessage) (interface{},
 		return nil, fmt.Errorf("%s", err)
 	}
 
-	var findObject any
-	err = db.Collection(ObjectCollection).FindOne(context.TODO(), bson.M{"_id": objectsGroups.Object}).Decode(&findObject)
+	objectRepo := mongodb.NewRepository[models.ObjectsModel, interface{}](db.Collection(ObjectCollection))
+	_, err = objectRepo.FindOne(context.Background(), bson.M{"_id": objectsGroups.Object})
 	if err != nil {
 		return nil, fmt.Errorf("%s", "Предмет не найдена")
 	}
 
-	var findGroup any
-	err = db.Collection(GroupCollection).FindOne(context.TODO(), bson.M{"_id": objectsGroups.Group}).Decode(&findGroup)
+	groupRepo := mongodb.NewRepository[models.GroupsModel, models.GroupsWithTeacherModel](db.Collection(GroupCollection))
+	_, err = groupRepo.FindOne(context.Background(), bson.M{"_id": objectsGroups.Group})
 	if err != nil {
 		return nil, fmt.Errorf("%s", "Группа не найдена")
 	}
 
-	var findTeacher any
-	err = db.Collection(TeacherCollection).FindOne(context.TODO(), bson.M{"_id": objectsGroups.Teacher}).Decode(&findTeacher)
+	teacherRepo := mongodb.NewRepository[models.TeachersModel, models.TeachersWithStatusModel](db.Collection(TeacherCollection))
+	_, err = teacherRepo.FindOne(context.Background(), bson.M{"_id": objectsGroups.Teacher})
 	if err != nil {
 		return nil, fmt.Errorf("%s", "Учитель не найдена")
 	}
 
-	return objectsGroups, nil
+	objectGroupRepo := mongodb.NewRepository[models.ObjectsGroupsModel, models.ObjectsGroupsWithGroupAndTeacherModel](db.Collection(ObjectGroupCollection))
+	objectGroupID, err := objectGroupRepo.InsertOne(context.Background(), &objectsGroups)
+	if err != nil {
+		return nil, err
+	}
+
+	return objectGroupID, nil
 }
 
 func ReadObjectsGroups(db *mongo.Database) (interface{}, []string, interface{}, error) {
-	pipline := []bson.M{
+	pipeline := []bson.M{
 		{
 			"$lookup": bson.M{
 				"from":         "objects",
@@ -103,17 +110,8 @@ func ReadObjectsGroups(db *mongo.Database) (interface{}, []string, interface{}, 
 		},
 	}
 
-	cursor, err := db.Collection(ObjectGroupCollection).Aggregate(context.TODO(), pipline)
-	if err != nil {
-		return nil, nil, nil, fmt.Errorf("%v", err)
-	}
-	defer cursor.Close(context.TODO())
-
-	var results []models.ObjectsGroupsWithGroupAndTeacherModel
-	err = cursor.All(context.TODO(), &results)
-	if err != nil {
-		return nil, nil, nil, fmt.Errorf("%v", err)
-	}
+	objectGroupRepo := mongodb.NewRepository[models.ObjectsGroupsModel, models.ObjectsGroupsWithGroupAndTeacherModel](db.Collection(ObjectGroupCollection))
+	objectGroupAggregate, err := objectGroupRepo.AggregateAll(context.Background(), pipeline)
 
 	var structForHead models.ObjectsGroupsWithGroupAndTeacherModel
 	header := GetFieldNames(structForHead)
@@ -135,5 +133,5 @@ func ReadObjectsGroups(db *mongo.Database) (interface{}, []string, interface{}, 
 		return nil, nil, nil, fmt.Errorf("%v", err)
 	}
 
-	return results, header, selectResult, nil
+	return objectGroupAggregate, header, selectResult, nil
 }

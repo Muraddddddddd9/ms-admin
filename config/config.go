@@ -1,51 +1,31 @@
-package config
+package loconfig
 
 import (
 	"fmt"
-	"os"
 
+	"github.com/Muraddddddddd9/ms-database/config"
 	"github.com/joho/godotenv"
 )
 
-type Config struct {
+type LocalConfig struct {
 	PROJECT_PORT string
 	NGINX_URL    string
-
-	DB_HOST        string
-	DB_PORT        string
-	DB_USERNAME    string
-	DB_PASSWORD    string
-	DB_AUTH_SOURCE string
-
-	REDIS_HOST     string
-	REDIS_PORT     string
-	REDIS_PASSWORD string
 
 	ADMIN_EMAIL    string
 	ADMIN_PASSWORD string
 }
 
-func LoadConfig() (*Config, error) {
+func LoadLocalConfig() (*LocalConfig, error) {
 	err := godotenv.Load()
 	if err != nil {
 		return nil, fmt.Errorf("load env is failed")
 	}
 
-	return &Config{
-		PROJECT_PORT: os.Getenv("PROJECT_PORT"),
-		NGINX_URL:    os.Getenv("NGINX_URL"),
+	return &LocalConfig{
+		PROJECT_PORT: config.GetEnv("PROJECT_PORT"),
+		NGINX_URL:    config.GetEnv("NGINX_URL"),
 
-		DB_HOST:        os.Getenv("DB_HOST"),
-		DB_PORT:        os.Getenv("DB_PORT"),
-		DB_USERNAME:    os.Getenv("DB_USERNAME"),
-		DB_PASSWORD:    os.Getenv("DB_PASSWORD"),
-		DB_AUTH_SOURCE: os.Getenv("DB_AUTH_SOURCE"),
-
-		REDIS_HOST:     os.Getenv("REDIS_HOST"),
-		REDIS_PORT:     os.Getenv("REDIS_PORT"),
-		REDIS_PASSWORD: os.Getenv("REDIS_PASSWORD"),
-
-		ADMIN_EMAIL:    os.Getenv("ADMIN_EMAIL"),
-		ADMIN_PASSWORD: os.Getenv("ADMIN_PASSWORD"),
+		ADMIN_EMAIL:    config.GetEnv("ADMIN_EMAIL"),
+		ADMIN_PASSWORD: config.GetEnv("ADMIN_PASSWORD"),
 	}, nil
 }

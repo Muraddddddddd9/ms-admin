@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"ms-admin/api/services"
@@ -24,41 +23,35 @@ func CreateData(c *fiber.Ctx, db *mongo.Database) error {
 		})
 	}
 
-	var insertData any
+	var newId interface{}
 	var err error
-
 	switch data.Collection {
 	case "students":
-		insertData, err = services.CreateStudents(db, data.NewData)
+		newId, err = services.CreateStudents(db, data.NewData)
 	case "teachers":
-		insertData, err = services.CreateTeachers(db, data.NewData)
+		newId, err = services.CreateTeachers(db, data.NewData)
 	case "groups":
-		insertData, err = services.CreateGroups(db, data.NewData)
+		newId, err = services.CreateGroups(db, data.NewData)
 	case "objects":
-		insertData, err = services.CreateObjects(db, data.NewData)
+		newId, err = services.CreateObjects(db, data.NewData)
 	case "objects_groups":
-		insertData, err = services.CreateObjectsGroups(db, data.NewData)
+		newId, err = services.CreateObjectsGroups(db, data.NewData)
 	case "statuses":
-		insertData, err = services.CreateStatuses(db, data.NewData)
+		newId, err = services.CreateStatuses(db, data.NewData)
 	}
 
+	var dataForLog any
+	_ = json.Unmarshal(data.NewData, &dataForLog)
+
 	if err != nil {
-		services.Logging(db, "/api/admin/create_data", "POST", "400", json.Unmarshal(data.NewData, &data.NewData), err.Error())
+		services.Logging(db, "/api/admin/create_data", "POST", "400", dataForLog, err.Error())
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": err.Error(),
 		})
 	}
 
-	collectionID, err := db.Collection(data.Collection).InsertOne(context.TODO(), insertData)
-	if err != nil {
-		services.Logging(db, "/api/admin/create_data", "POST", "400", json.Unmarshal(data.NewData, &data.NewData), err.Error())
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"message": "Данные не были добавлены",
-		})
-	}
-
-	services.Logging(db, "/api/admin/create_data", "POST", "202", insertData, nil)
+	services.Logging(db, "/api/admin/create_data", "POST", "202", dataForLog, nil)
 	return c.Status(fiber.StatusAccepted).JSON(fiber.Map{
-		"message": fmt.Sprintf("Данные добавлены с ID: %v", collectionID.InsertedID.(primitive.ObjectID).Hex()),
+		"message": fmt.Sprintf("Данные добавлены с ID: %v", newId.(primitive.ObjectID).Hex()),
 	})
 }

@@ -5,47 +5,42 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"ms-admin/api/models"
 
+	"github.com/Muraddddddddd9/ms-database/data/mongodb"
+	"github.com/Muraddddddddd9/ms-database/models"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"golang.org/x/crypto/bcrypt"
 )
 
 var (
-	StidentCollection = "students"
+	StudentCollection = "students"
 )
 
 func CreateStudents(db *mongo.Database, data json.RawMessage) (interface{}, error) {
 	var student models.StudentsModel
+
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	decoder.DisallowUnknownFields()
-
 	if err := decoder.Decode(&student); err != nil {
 		return nil, fmt.Errorf("%v: %v", "Неверные данные студента", err)
 	}
 
-	if student.Name == "" {
-		return nil, fmt.Errorf("поле 'name' не может быть пустым")
+	fields := map[string]string{
+		"name":       student.Name,
+		"surname":    student.Surname,
+		"patronymic": student.Patronymic,
+		"email":      student.Email,
+		"password":   student.Password,
 	}
 
-	if student.Surname == "" {
-		return nil, fmt.Errorf("поле 'surname' не может быть пустым")
+	for name, value := range fields {
+		if value == "" {
+			return nil, fmt.Errorf("поле '%s' не может быть пустым", name)
+		}
 	}
 
-	if student.Patronymic == "" {
-		return nil, fmt.Errorf("поле 'patronymic' не может быть пустым")
-	}
-
-	if student.Email == "" {
-		return nil, fmt.Errorf("поле 'email' не может быть пустым")
-	}
-
-	if student.Password == "" {
-		return nil, fmt.Errorf("поле 'password' не может быть пустым")
-	}
-
-	err := CheckReplica(db, StidentCollection, bson.M{"email": student.Email})
+	err := CheckReplica(db, StudentCollection, bson.M{"email": student.Email})
 	if err != nil {
 		return nil, fmt.Errorf("%s", err)
 	}
@@ -56,19 +51,25 @@ func CreateStudents(db *mongo.Database, data json.RawMessage) (interface{}, erro
 	bcryptPassword, _ := bcrypt.GenerateFromPassword([]byte(student.Password), bcrypt.DefaultCost)
 	student.Password = string(bcryptPassword)
 
-	var findGroup any
-	err = db.Collection(GroupCollection).FindOne(context.TODO(), bson.M{"_id": student.Group}).Decode(&findGroup)
+	groupRepo := mongodb.NewRepository[models.GroupsModel, models.GroupsWithTeacherModel](db.Collection(GroupCollection))
+	_, err = groupRepo.FindOne(context.Background(), bson.M{"_id": student.Group})
 	if err != nil {
 		return nil, fmt.Errorf("%s", "Группа не найдена")
 	}
 
-	var findStatus any
-	err = db.Collection(StatusCollection).FindOne(context.TODO(), bson.M{"_id": student.Status}).Decode(&findStatus)
+	statusRepo := mongodb.NewRepository[models.StatusesModel, interface{}](db.Collection(StatusCollection))
+	_, err = statusRepo.FindOne(context.Background(), bson.M{"_id": student.Status})
 	if err != nil {
 		return nil, fmt.Errorf("%s", "Статус не найдена")
 	}
 
-	return student, nil
+	studentRepo := mongodb.NewRepository[models.StudentsModel, models.StudentsWithGroupAndStatusModel](db.Collection(StudentCollection))
+	studentID, err := studentRepo.InsertOne(context.Background(), &student)
+	if err != nil {
+		return nil, err
+	}
+
+	return studentID, nil
 }
 
 func ReadStudents(db *mongo.Database) (interface{}, []string, interface{}, error) {
@@ -111,15 +112,10 @@ func ReadStudents(db *mongo.Database) (interface{}, []string, interface{}, error
 		},
 	}
 
-	cursor, err := db.Collection(StidentCollection).Aggregate(context.TODO(), pipeline)
+	studentRepo := mongodb.NewRepository[models.StudentsModel, models.StudentsWithGroupAndStatusModel](db.Collection(StudentCollection))
+	studentAggregate, err := studentRepo.AggregateAll(context.Background(), pipeline)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("%v", err)
-	}
-	defer cursor.Close(context.TODO())
-
-	var results []models.StudentsWithGroupAndStatusModel
-	if err = cursor.All(context.TODO(), &results); err != nil {
-		return nil, nil, nil, fmt.Errorf("%v", err)
+		return nil, nil, nil, err
 	}
 
 	var structForHead models.StudentsWithGroupAndStatusModel
@@ -137,5 +133,5 @@ func ReadStudents(db *mongo.Database) (interface{}, []string, interface{}, error
 		return nil, nil, nil, fmt.Errorf("%v", err)
 	}
 
-	return results, header, selectResult, nil
+	return studentAggregate, header, selectResult, nil
 }
