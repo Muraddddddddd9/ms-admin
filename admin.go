@@ -1,19 +1,20 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"ms-admin/api/messages"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/storage/redis/v3"
+	"github.com/redis/go-redis/v9"
 )
 
-func AdminOnly(storage *redis.Storage) fiber.Handler {
+func AdminOnly(storage *redis.Client) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		session_id := c.Cookies("session_id")
 
-		body, err := storage.Get(fmt.Sprintf("users:%v", session_id))
+		resGet, err := storage.Get(context.Background(), fmt.Sprintf("users:%v", session_id)).Result()
 		if err != nil {
 			return c.Status(401).JSON(fiber.Map{"message": messages.ErrSessionNotFound})
 		}
@@ -21,7 +22,7 @@ func AdminOnly(storage *redis.Storage) fiber.Handler {
 		var user struct {
 			Status string `json:"status"`
 		}
-		err = json.Unmarshal(body, &user)
+		err = json.Unmarshal([]byte(resGet), &user)
 		if err != nil {
 			return c.Status(401).JSON(fiber.Map{"message": messages.ErrGetData})
 		}
