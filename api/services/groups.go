@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"ms-admin/api/messages"
 
 	"github.com/Muraddddddddd9/ms-database/data/mongodb"
 	"github.com/Muraddddddddd9/ms-database/models"
@@ -22,7 +23,7 @@ func CreateGroups(db *mongo.Database, data json.RawMessage) (interface{}, error)
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&group); err != nil {
-		return nil, fmt.Errorf("%v: %v", "Неверные данные группы", err)
+		return nil, fmt.Errorf("%v: %v", messages.ErrInvalidDataGroup, err)
 	}
 
 	fileds := map[string]string{
@@ -31,7 +32,7 @@ func CreateGroups(db *mongo.Database, data json.RawMessage) (interface{}, error)
 
 	for name, value := range fileds {
 		if value == "" {
-			return nil, fmt.Errorf("поле '%s' не может быть пустым", name)
+			return nil, fmt.Errorf(messages.ErrFieldCannotEmpty, name)
 		}
 	}
 
@@ -43,7 +44,7 @@ func CreateGroups(db *mongo.Database, data json.RawMessage) (interface{}, error)
 	teacherRepo := mongodb.NewRepository[models.TeachersModel, models.TeachersWithStatusModel](db.Collection(TeacherCollection))
 	_, err = teacherRepo.FindOne(context.Background(), bson.M{"_id": group.Teacher})
 	if err != nil {
-		return nil, fmt.Errorf("%s", "Учитель не найден")
+		return nil, fmt.Errorf("%s", messages.ErrTeacherNotFound)
 	}
 
 	groupRepo := mongodb.NewRepository[models.GroupsModel, models.GroupsWithTeacherModel](db.Collection(GroupCollection))

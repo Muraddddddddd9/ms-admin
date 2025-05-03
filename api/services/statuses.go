@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"ms-admin/api/messages"
 
 	"github.com/Muraddddddddd9/ms-database/data/mongodb"
 	"github.com/Muraddddddddd9/ms-database/models"
@@ -22,7 +23,7 @@ func CreateStatuses(db *mongo.Database, data json.RawMessage) (interface{}, erro
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&status); err != nil {
-		return nil, fmt.Errorf("%v: %v", "Неверные данные статуса", err)
+		return nil, fmt.Errorf("%v: %v", messages.ErrInvalidDataStatus, err)
 	}
 
 	fields := map[string]string{
@@ -31,7 +32,7 @@ func CreateStatuses(db *mongo.Database, data json.RawMessage) (interface{}, erro
 
 	for name, value := range fields {
 		if value == "" {
-			return nil, fmt.Errorf("поле '%s' не может быть пустым", name)
+			return nil, fmt.Errorf(messages.ErrFieldCannotEmpty, name)
 		}
 	}
 

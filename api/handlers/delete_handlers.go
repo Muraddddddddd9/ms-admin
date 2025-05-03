@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"fmt"
+	"ms-admin/api/messages"
 	"ms-admin/api/services"
 
 	"github.com/gofiber/fiber/v2"
@@ -19,7 +20,7 @@ func DeleteData(c *fiber.Ctx, db *mongo.Database) error {
 
 	if err := c.BodyParser(&deleteData); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"message": "Данные введены не верно",
+			"message": messages.ErrInvalidInput,
 		})
 	}
 
@@ -81,11 +82,11 @@ func DeleteData(c *fiber.Ctx, db *mongo.Database) error {
 			}
 		}
 
-		_, err := db.Collection(deleteData.Collection).DeleteOne(context.TODO(), filter)
+		_, err := db.Collection(deleteData.Collection).DeleteOne(context.Background(), filter)
 		if err != nil {
 			services.Logging(db, "/api/admin/delete_data", "POST", "400", deleteData, err.Error())
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"message": "Ошибка в удаление",
+				"message": messages.ErrDeleteData,
 			})
 		}
 	}
@@ -99,6 +100,6 @@ func DeleteData(c *fiber.Ctx, db *mongo.Database) error {
 
 	services.Logging(db, "/api/admin/delete_data", "POST", "202", deleteData, nil)
 	return c.Status(fiber.StatusAccepted).JSON(fiber.Map{
-		"message": fmt.Sprintf("Было удалено %v из %v", len(deleteData.ID)-countNoneDelete, len(deleteData.ID)),
+		"message": fmt.Sprintf(messages.SuccDataDelete, len(deleteData.ID)-countNoneDelete, len(deleteData.ID)),
 	})
 }

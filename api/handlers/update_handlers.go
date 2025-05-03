@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"ms-admin/api/messages"
 	"ms-admin/api/services"
 
 	"github.com/gofiber/fiber/v2"
@@ -21,7 +22,7 @@ func UpdateData(c *fiber.Ctx, db *mongo.Database) error {
 
 	if err := c.BodyParser(&data); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"message": "Данные введены не верно",
+			"message": messages.ErrInvalidInput,
 		})
 	}
 
@@ -78,16 +79,16 @@ func UpdateData(c *fiber.Ctx, db *mongo.Database) error {
 		}
 	}
 
-	_, err = db.Collection(data.Collection).UpdateOne(context.TODO(), filter, update)
+	_, err = db.Collection(data.Collection).UpdateOne(context.Background(), filter, update)
 	if err != nil {
 		services.Logging(db, "/api/admin/update_data", "POST", "404", data, err)
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"message": "Обновленние данных провалилась",
+			"message": messages.ErrUpdateData,
 		})
 	}
 
 	services.Logging(db, "/api/admin/update_data", "POST", "202", data, nil)
 	return c.Status(fiber.StatusAccepted).JSON(fiber.Map{
-		"message": "Данные обновлены",
+		"message": messages.SuccDataUpdate,
 	})
 }

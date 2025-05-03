@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"ms-admin/api/messages"
 	"ms-admin/api/services"
 
 	"github.com/gofiber/fiber/v2"
@@ -19,7 +20,7 @@ func CreateData(c *fiber.Ctx, db *mongo.Database) error {
 	var data CreateDataStruct
 	if err := c.BodyParser(&data); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"message": "Данные введены не верно",
+			"message": messages.ErrInvalidInput,
 		})
 	}
 
@@ -52,6 +53,6 @@ func CreateData(c *fiber.Ctx, db *mongo.Database) error {
 
 	services.Logging(db, "/api/admin/create_data", "POST", "202", dataForLog, nil)
 	return c.Status(fiber.StatusAccepted).JSON(fiber.Map{
-		"message": fmt.Sprintf("Данные добавлены с ID: %v", newId.(primitive.ObjectID).Hex()),
+		"message": fmt.Sprintf(messages.SuccDataAdd, newId.(primitive.ObjectID).Hex()),
 	})
 }

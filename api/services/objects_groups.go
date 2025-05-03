@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"ms-admin/api/messages"
 
 	"github.com/Muraddddddddd9/ms-database/data/mongodb"
 	"github.com/Muraddddddddd9/ms-database/models"
@@ -22,7 +23,7 @@ func CreateObjectsGroups(db *mongo.Database, data json.RawMessage) (interface{},
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&objectsGroups); err != nil {
-		return nil, fmt.Errorf("%v: %v", "Неверные данные предмета для группы", err)
+		return nil, fmt.Errorf("%v: %v", messages.ErrInvalidDataObjectForGroup, err)
 	}
 
 	err := CheckReplica(db, ObjectGroupCollection, bson.M{"object": objectsGroups.Object, "group": objectsGroups.Group})
@@ -33,19 +34,19 @@ func CreateObjectsGroups(db *mongo.Database, data json.RawMessage) (interface{},
 	objectRepo := mongodb.NewRepository[models.ObjectsModel, interface{}](db.Collection(ObjectCollection))
 	_, err = objectRepo.FindOne(context.Background(), bson.M{"_id": objectsGroups.Object})
 	if err != nil {
-		return nil, fmt.Errorf("%s", "Предмет не найдена")
+		return nil, fmt.Errorf("%s", messages.ErrObjectNotFound)
 	}
 
 	groupRepo := mongodb.NewRepository[models.GroupsModel, models.GroupsWithTeacherModel](db.Collection(GroupCollection))
 	_, err = groupRepo.FindOne(context.Background(), bson.M{"_id": objectsGroups.Group})
 	if err != nil {
-		return nil, fmt.Errorf("%s", "Группа не найдена")
+		return nil, fmt.Errorf("%s", messages.ErrGroupNotFound)
 	}
 
 	teacherRepo := mongodb.NewRepository[models.TeachersModel, models.TeachersWithStatusModel](db.Collection(TeacherCollection))
 	_, err = teacherRepo.FindOne(context.Background(), bson.M{"_id": objectsGroups.Teacher})
 	if err != nil {
-		return nil, fmt.Errorf("%s", "Учитель не найдена")
+		return nil, fmt.Errorf("%s", messages.ErrTeacherNotFound)
 	}
 
 	objectGroupRepo := mongodb.NewRepository[models.ObjectsGroupsModel, models.ObjectsGroupsWithGroupAndTeacherModel](db.Collection(ObjectGroupCollection))
@@ -112,6 +113,9 @@ func ReadObjectsGroups(db *mongo.Database) (interface{}, []string, interface{}, 
 
 	objectGroupRepo := mongodb.NewRepository[models.ObjectsGroupsModel, models.ObjectsGroupsWithGroupAndTeacherModel](db.Collection(ObjectGroupCollection))
 	objectGroupAggregate, err := objectGroupRepo.AggregateAll(context.Background(), pipeline)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("%v", err)
+	}
 
 	var structForHead models.ObjectsGroupsWithGroupAndTeacherModel
 	header := GetFieldNames(structForHead)

@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"fmt"
+	"ms-admin/api/messages"
 	"reflect"
 
 	"github.com/Muraddddddddd9/ms-database/models"
@@ -12,9 +13,9 @@ import (
 
 func CheckReplica(db *mongo.Database, collection string, filter bson.M) error {
 	var result any
-	err := db.Collection(collection).FindOne(context.TODO(), filter).Decode(&result)
+	err := db.Collection(collection).FindOne(context.Background(), filter).Decode(&result)
 	if err == nil {
-		return fmt.Errorf("%s", "Данные уже существуют")
+		return fmt.Errorf("%s", messages.ErrDataAlreadyExists)
 	}
 
 	return nil
@@ -56,11 +57,11 @@ func FilterHeaders(headers []string, toRemove []string) []string {
 }
 
 func SelectData(db *mongo.Database, collection string, selectResult *models.SelectModels) error {
-	cursor, err := db.Collection(collection).Find(context.TODO(), bson.M{})
+	cursor, err := db.Collection(collection).Find(context.Background(), bson.M{})
 	if err != nil {
 		return fmt.Errorf("%v", err)
 	}
-	defer cursor.Close(context.TODO())
+	defer cursor.Close(context.Background())
 
 	var res interface{}
 	switch collection {
@@ -74,7 +75,7 @@ func SelectData(db *mongo.Database, collection string, selectResult *models.Sele
 		res = &selectResult.Statuses
 	}
 
-	err = cursor.All(context.TODO(), res)
+	err = cursor.All(context.Background(), res)
 	if err != nil {
 		return fmt.Errorf("%v", err)
 	}
@@ -83,9 +84,9 @@ func SelectData(db *mongo.Database, collection string, selectResult *models.Sele
 }
 
 func CheckDataOtherTable(db *mongo.Database, collection string, filter bson.M) error {
-	err := db.Collection(collection).FindOne(context.TODO(), filter).Err()
+	err := db.Collection(collection).FindOne(context.Background(), filter).Err()
 	if err == nil {
-		return fmt.Errorf("Данные находятся в коллекции %s", collection)
+		return fmt.Errorf(messages.ErrDataInCollection, collection)
 	}
 	if err == mongo.ErrNoDocuments {
 		return nil

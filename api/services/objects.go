@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"ms-admin/api/messages"
 
 	"github.com/Muraddddddddd9/ms-database/data/mongodb"
 	"github.com/Muraddddddddd9/ms-database/models"
@@ -22,7 +23,7 @@ func CreateObjects(db *mongo.Database, data json.RawMessage) (interface{}, error
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&object); err != nil {
-		return nil, fmt.Errorf("%v: %v", "Неверные данные предмета", err)
+		return nil, fmt.Errorf("%v: %v", messages.ErrInvalidDataObject, err)
 	}
 
 	fileds := map[string]string{
@@ -31,7 +32,7 @@ func CreateObjects(db *mongo.Database, data json.RawMessage) (interface{}, error
 
 	for name, value := range fileds {
 		if value == "" {
-			return nil, fmt.Errorf("поле '%s' не может быть пустым", name)
+			return nil, fmt.Errorf(messages.ErrFieldCannotEmpty, name)
 		}
 	}
 

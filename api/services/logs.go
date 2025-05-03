@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"ms-admin/api/messages"
 	"time"
 
 	"github.com/Muraddddddddd9/ms-database/data/mongodb"
@@ -28,7 +29,7 @@ func Logging(db *mongo.Database, api, method, status string, data any, errData a
 	logRepo := mongodb.NewRepository[models.Log, interface{}](db.Collection(LogsCollection))
 	_, err := logRepo.InsertOne(context.Background(), &document)
 	if err != nil {
-		log.Errorf("Ошибка в логгирование данных")
+		log.Errorf(messages.ErrDataLogging)
 	}
 }
 

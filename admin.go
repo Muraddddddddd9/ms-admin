@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"ms-admin/api/messages"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/storage/redis/v3"
@@ -14,7 +15,7 @@ func AdminOnly(storage *redis.Storage) fiber.Handler {
 
 		body, err := storage.Get(fmt.Sprintf("users:%v", session_id))
 		if err != nil {
-			return c.Status(401).JSON(fiber.Map{"error": "Сессия не найдена"})
+			return c.Status(401).JSON(fiber.Map{"message": messages.ErrSessionNotFound})
 		}
 
 		var user struct {
@@ -22,7 +23,7 @@ func AdminOnly(storage *redis.Storage) fiber.Handler {
 		}
 		err = json.Unmarshal(body, &user)
 		if err != nil {
-			return c.Status(401).JSON(fiber.Map{"error": "Ошибка в получение данных"})
+			return c.Status(401).JSON(fiber.Map{"message": messages.ErrGetData})
 		}
 
 		if user.Status != "админ" {

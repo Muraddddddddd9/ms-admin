@@ -5,7 +5,8 @@ import (
 	"fmt"
 	"log"
 	"ms-admin/api/handlers"
-	"ms-admin/config"
+	"ms-admin/api/messages"
+	loconfig "ms-admin/config"
 
 	"github.com/Muraddddddddd9/ms-database/data/mongodb"
 	"github.com/Muraddddddddd9/ms-database/data/redis"
@@ -16,13 +17,13 @@ import (
 func main() {
 	db, err := mongodb.Connect()
 	if err == nil {
-		log.Println("Connect to MONGODB is succ")
+		log.Println(messages.SuccConnectMongo)
 	}
 	defer db.Client().Disconnect(context.Background())
 
 	storage, err := redis.Connect()
 	if err == nil {
-		log.Println("Connect to REDIS is succ")
+		log.Println(messages.SuccConnectRedis)
 	}
 	defer storage.Close()
 
@@ -38,7 +39,7 @@ func main() {
 
 	app := fiber.New()
 	app.Use(cors.New(cors.Config{
-		AllowOrigins:     "http://localhost:5173",
+		AllowOrigins:     cfg.ORIGIN_URL,
 		AllowHeaders:     "Origin, Content-Type, Accept",
 		AllowMethods:     "GET, POST, PATCH, DELETE",
 		AllowCredentials: true,
