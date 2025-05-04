@@ -2,17 +2,22 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"ms-admin/api/messages"
 	"ms-admin/api/services"
 
+	"github.com/Muraddddddddd9/ms-database/data/mongodb"
+	"github.com/Muraddddddddd9/ms-database/models"
 	"github.com/gofiber/fiber/v2"
+	"github.com/redis/go-redis/v9"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"golang.org/x/crypto/bcrypt"
 )
 
-func UpdateData(c *fiber.Ctx, db *mongo.Database) error {
+func UpdateData(c *fiber.Ctx, db *mongo.Database, rdb *redis.Client) error {
 	var data struct {
 		ID         primitive.ObjectID `bson:"_id" json:"_id"`
 		Collection string             `bson:"collection" json:"collection"`
@@ -85,6 +90,60 @@ func UpdateData(c *fiber.Ctx, db *mongo.Database) error {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"message": messages.ErrUpdateData,
 		})
+	}
+
+	if data.Collection == "students" || data.Collection == "teachers" {
+		var userData interface{}
+		var userID string
+
+		switch data.Collection {
+		case "students":
+			studentRepo := mongodb.NewRepository[models.StudentsModel, models.StudentsWithGroupAndStatusModel](db.Collection("students"))
+			student, _ := studentRepo.FindOne(context.Background(), filter)
+
+			groupRepo := mongodb.NewRepository[models.GroupsModel, models.GroupsWithTeacherModel](db.Collection("groups"))
+			group, _ := groupRepo.FindOne(context.Background(), bson.M{"_id": student.Group})
+
+			statusRepo := mongodb.NewRepository[models.StatusesModel, interface{}](db.Collection("statuses"))
+			status, _ := statusRepo.FindOne(context.Background(), bson.M{"_id": student.Status})
+
+			userData, _ = json.Marshal(models.StudentsWithGroupAndStatusModel{
+				ID:         student.ID,
+				Name:       student.Name,
+				Surname:    student.Surname,
+				Patronymic: student.Patronymic,
+				Group:      group.Group,
+				Email:      student.Email,
+				Password:   "",
+				Telegram:   student.Telegram,
+				Diplomas:   student.Diplomas,
+				IPs:        student.IPs,
+				Status:     status.Status,
+			})
+			userID = student.ID.Hex()
+		case "teachers":
+			teacherRepo := mongodb.NewRepository[models.StudentsModel, models.StudentsWithGroupAndStatusModel](db.Collection("teachers"))
+			teacher, _ := teacherRepo.FindOne(context.Background(), filter)
+
+			statusRepo := mongodb.NewRepository[models.StatusesModel, interface{}](db.Collection("statuses"))
+			status, _ := statusRepo.FindOne(context.Background(), bson.M{"_id": teacher.Group})
+
+			userData, _ = json.Marshal(models.StudentsWithGroupAndStatusModel{
+				ID:         teacher.ID,
+				Name:       teacher.Name,
+				Surname:    teacher.Surname,
+				Patronymic: teacher.Patronymic,
+				Email:      teacher.Email,
+				Password:   "",
+				Telegram:   teacher.Telegram,
+				Diplomas:   teacher.Diplomas,
+				IPs:        teacher.IPs,
+				Status:     status.Status,
+			})
+			userID = teacher.ID.Hex()
+		}
+
+		rdb.Set(context.Background(), fmt.Sprintf("user:%v", userID), userData, redis.KeepTTL)
 	}
 
 	services.Logging(db, "/api/admin/update_data", "POST", "202", data, nil)

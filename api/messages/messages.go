@@ -1,11 +1,14 @@
 package messages
 
 const (
+	ErrServerError = "Ошибка сервера"
+
 	ErrInvalidInput      = "Данные введены неверно"
 	ErrDataInCollection  = "Данные находятся в коллекции %s"
 	ErrDataAlreadyExists = "Данные уже существуют"
 	ErrFieldCannotEmpty  = "Поле '%s' не может быть пустым"
 	ErrLoadEnv           = "Не удалось загрузить env"
+	ErrUserNotFound      = "Пользователь не найден"
 
 	ErrAdminConfig       = "Адрес электронной почты администратора/пароль не заданы в конфигурации"
 	ErrHashPassword      = "Не удалось хэшировать пароль: %v"
