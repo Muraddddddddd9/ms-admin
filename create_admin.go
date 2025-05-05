@@ -22,17 +22,46 @@ var (
 	AdminCreate       = "админ"
 )
 
-func CreateStartAdmin(db *mongo.Database, cfg *loconfig.LocalConfig) error {
-	if cfg.ADMIN_EMAIL == "" || cfg.ADMIN_PASSWORD == "" {
-		return errors.New(messages.ErrAdminConfig)
-	}
-
+func CreateAdmin(db *mongo.Database, cfg *loconfig.LocalConfig, statusID primitive.ObjectID) error {
 	hashedPassword, err := bcrypt.GenerateFromPassword(
 		[]byte(cfg.ADMIN_PASSWORD),
 		bcrypt.DefaultCost,
 	)
 	if err != nil {
 		return fmt.Errorf(messages.ErrHashPassword, err)
+	}
+
+	teacherRepo := mongodb.NewRepository[models.TeachersModel, models.TeachersWithStatusModel](db.Collection(TeacherCollection))
+	if _, err := teacherRepo.FindOne(context.Background(), bson.M{"email": cfg.ADMIN_EMAIL}); err != nil {
+		if err == mongo.ErrNoDocuments {
+			document := models.TeachersModel{
+				Name:       "Admin",
+				Surname:    "Admin",
+				Patronymic: "Admin",
+				Email:      cfg.ADMIN_EMAIL,
+				Password:   string(hashedPassword),
+				IPs:        []string{},
+				Status:     statusID,
+			}
+
+			_, err = teacherRepo.InsertOne(context.Background(), &document)
+			if err != nil {
+				return fmt.Errorf(messages.ErrCreateAdmin, err)
+			}
+			log.Println(messages.SuccCreateAdmin)
+		} else {
+			return fmt.Errorf(messages.ErrCheckAdmin, err)
+		}
+	} else {
+		log.Print(messages.SuccAdminAlreadyExists)
+	}
+
+	return nil
+}
+
+func CreateStartAdmin(db *mongo.Database, cfg *loconfig.LocalConfig) error {
+	if cfg.ADMIN_EMAIL == "" || cfg.ADMIN_PASSWORD == "" {
+		return errors.New(messages.ErrAdminConfig)
 	}
 
 	var newAdminId interface{}
@@ -43,34 +72,17 @@ func CreateStartAdmin(db *mongo.Database, cfg *loconfig.LocalConfig) error {
 			if err != nil {
 				return fmt.Errorf(messages.ErrCreateAdminStatus, err)
 			}
+			err = CreateAdmin(db, cfg, newAdminId.(primitive.ObjectID))
+			if err != nil {
+				return err
+			}
 		} else {
 			return fmt.Errorf(messages.ErrAdminNotFound, err)
 		}
 	} else {
-		newAdminId = adminID.ID
-		teacherRepo := mongodb.NewRepository[models.TeachersModel, models.TeachersWithStatusModel](db.Collection(TeacherCollection))
-		if _, err := teacherRepo.FindOne(context.Background(), bson.M{"email": cfg.ADMIN_EMAIL}); err != nil {
-			if err == mongo.ErrNoDocuments {
-				document := models.TeachersModel{
-					Name:       "Admin",
-					Surname:    "Admin",
-					Patronymic: "Admin",
-					Email:      cfg.ADMIN_EMAIL,
-					Password:   string(hashedPassword),
-					IPs:        []string{},
-					Status:     newAdminId.(primitive.ObjectID),
-				}
-
-				_, err = teacherRepo.InsertOne(context.Background(), &document)
-				if err != nil {
-					return fmt.Errorf(messages.ErrCreateAdmin, err)
-				}
-				log.Println(messages.SuccCreateAdmin)
-			} else {
-				return fmt.Errorf(messages.ErrCheckAdmin, err)
-			}
-		} else {
-			log.Println(messages.SuccAdminAlreadyExists)
+		err = CreateAdmin(db, cfg, adminID.ID)
+		if err != nil {
+			return fmt.Errorf(messages.ErrCreateAdminStatus, err)
 		}
 	}
 
