@@ -3,8 +3,9 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
-	"ms-admin/api/messages"
+	"ms-admin/api/constants"
 	"ms-admin/api/services"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -20,24 +21,24 @@ func CreateData(c *fiber.Ctx, db *mongo.Database) error {
 	var data CreateDataStruct
 	if err := c.BodyParser(&data); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"message": messages.ErrInvalidInput,
+			"message": constants.ErrInvalidInput,
 		})
 	}
 
 	var newId interface{}
 	var err error
-	switch data.Collection {
-	case "students":
+	switch strings.TrimSpace(data.Collection) {
+	case constants.StudentCollection:
 		newId, err = services.CreateStudents(db, data.NewData)
-	case "teachers":
+	case constants.TeacherCollection:
 		newId, err = services.CreateTeachers(db, data.NewData)
-	case "groups":
+	case constants.GroupCollection:
 		newId, err = services.CreateGroups(db, data.NewData)
-	case "objects":
+	case constants.ObjectCollection:
 		newId, err = services.CreateObjects(db, data.NewData)
-	case "objects_groups":
+	case constants.ObjectGroupCollection:
 		newId, err = services.CreateObjectsGroups(db, data.NewData)
-	case "statuses":
+	case constants.StatusCollection:
 		newId, err = services.CreateStatuses(db, data.NewData)
 	}
 
@@ -53,6 +54,6 @@ func CreateData(c *fiber.Ctx, db *mongo.Database) error {
 
 	services.Logging(db, "/api/admin/create_data", "POST", "202", dataForLog, nil)
 	return c.Status(fiber.StatusAccepted).JSON(fiber.Map{
-		"message": fmt.Sprintf(messages.SuccDataAdd, newId.(primitive.ObjectID).Hex()),
+		"message": fmt.Sprintf(constants.SuccDataAdd, newId.(primitive.ObjectID).Hex()),
 	})
 }

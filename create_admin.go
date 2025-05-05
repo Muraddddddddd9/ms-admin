@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"ms-admin/api/messages"
+	"ms-admin/api/constants"
 	loconfig "ms-admin/config"
 
 	"github.com/Muraddddddddd9/ms-database/data/mongodb"
@@ -16,10 +16,8 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-var (
-	StatusCollection  = "statuses"
-	TeacherCollection = "teachers"
-	AdminCreate       = "админ"
+const (
+	AdminCreate = "админ"
 )
 
 func CreateAdmin(db *mongo.Database, cfg *loconfig.LocalConfig, statusID primitive.ObjectID) error {
@@ -28,10 +26,10 @@ func CreateAdmin(db *mongo.Database, cfg *loconfig.LocalConfig, statusID primiti
 		bcrypt.DefaultCost,
 	)
 	if err != nil {
-		return fmt.Errorf(messages.ErrHashPassword, err)
+		return fmt.Errorf(constants.ErrHashPassword, err)
 	}
 
-	teacherRepo := mongodb.NewRepository[models.TeachersModel, models.TeachersWithStatusModel](db.Collection(TeacherCollection))
+	teacherRepo := mongodb.NewRepository[models.TeachersModel, models.TeachersWithStatusModel](db.Collection(constants.TeacherCollection))
 	if _, err := teacherRepo.FindOne(context.Background(), bson.M{"email": cfg.ADMIN_EMAIL}); err != nil {
 		if err == mongo.ErrNoDocuments {
 			document := models.TeachersModel{
@@ -46,14 +44,14 @@ func CreateAdmin(db *mongo.Database, cfg *loconfig.LocalConfig, statusID primiti
 
 			_, err = teacherRepo.InsertOne(context.Background(), &document)
 			if err != nil {
-				return fmt.Errorf(messages.ErrCreateAdmin, err)
+				return fmt.Errorf(constants.ErrCreateAdmin, err)
 			}
-			log.Println(messages.SuccCreateAdmin)
+			log.Println(constants.SuccCreateAdmin)
 		} else {
-			return fmt.Errorf(messages.ErrCheckAdmin, err)
+			return fmt.Errorf(constants.ErrCheckAdmin, err)
 		}
 	} else {
-		log.Print(messages.SuccAdminAlreadyExists)
+		log.Print(constants.SuccAdminAlreadyExists)
 	}
 
 	return nil
@@ -61,28 +59,28 @@ func CreateAdmin(db *mongo.Database, cfg *loconfig.LocalConfig, statusID primiti
 
 func CreateStartAdmin(db *mongo.Database, cfg *loconfig.LocalConfig) error {
 	if cfg.ADMIN_EMAIL == "" || cfg.ADMIN_PASSWORD == "" {
-		return errors.New(messages.ErrAdminConfig)
+		return errors.New(constants.ErrAdminConfig)
 	}
 
 	var newAdminId interface{}
-	statuseRepo := mongodb.NewRepository[models.StatusesModel, interface{}](db.Collection(StatusCollection))
+	statuseRepo := mongodb.NewRepository[models.StatusesModel, interface{}](db.Collection(constants.StatusCollection))
 	if adminID, err := statuseRepo.FindOne(context.Background(), bson.M{"status": AdminCreate}); err != nil {
 		if err == mongo.ErrNoDocuments {
 			newAdminId, err = statuseRepo.InsertOne(context.Background(), &models.StatusesModel{Status: AdminCreate})
 			if err != nil {
-				return fmt.Errorf(messages.ErrCreateAdminStatus, err)
+				return fmt.Errorf(constants.ErrCreateAdminStatus, err)
 			}
 			err = CreateAdmin(db, cfg, newAdminId.(primitive.ObjectID))
 			if err != nil {
 				return err
 			}
 		} else {
-			return fmt.Errorf(messages.ErrAdminNotFound, err)
+			return fmt.Errorf(constants.ErrAdminNotFound, err)
 		}
 	} else {
 		err = CreateAdmin(db, cfg, adminID.ID)
 		if err != nil {
-			return fmt.Errorf(messages.ErrCreateAdminStatus, err)
+			return fmt.Errorf(constants.ErrCreateAdminStatus, err)
 		}
 	}
 

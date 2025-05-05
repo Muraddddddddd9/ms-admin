@@ -5,7 +5,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"ms-admin/api/messages"
+	"ms-admin/api/constants"
+	"strings"
 
 	"github.com/Muraddddddddd9/ms-database/data/mongodb"
 	"github.com/Muraddddddddd9/ms-database/models"
@@ -14,18 +15,19 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-var (
-	StudentCollection = "students"
-)
-
 func CreateStudents(db *mongo.Database, data json.RawMessage) (interface{}, error) {
 	var student models.StudentsModel
 
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&student); err != nil {
-		return nil, fmt.Errorf("%v: %v", messages.ErrInvalidDataStudent, err)
+		return nil, fmt.Errorf("%v: %v", constants.ErrInvalidDataStudent, err)
 	}
+
+	student.Name = strings.TrimSpace(strings.ToLower(student.Name))
+	student.Surname = strings.TrimSpace(strings.ToLower(student.Surname))
+	student.Patronymic = strings.TrimSpace(strings.ToLower(student.Patronymic))
+	student.Email = strings.TrimSpace(strings.ToLower(student.Email))
 
 	fields := map[string]string{
 		"name":       student.Name,
@@ -36,12 +38,12 @@ func CreateStudents(db *mongo.Database, data json.RawMessage) (interface{}, erro
 	}
 
 	for name, value := range fields {
-		if value == "" {
-			return nil, fmt.Errorf(messages.ErrFieldCannotEmpty, name)
+		if strings.TrimSpace(value) == "" {
+			return nil, fmt.Errorf(constants.ErrFieldCannotEmpty, name)
 		}
 	}
 
-	err := CheckReplica(db, StudentCollection, bson.M{"email": student.Email})
+	err := CheckReplica(db, constants.StudentCollection, bson.M{"email": strings.TrimSpace(strings.ToLower(student.Email))})
 	if err != nil {
 		return nil, fmt.Errorf("%s", err)
 	}
@@ -49,22 +51,22 @@ func CreateStudents(db *mongo.Database, data json.RawMessage) (interface{}, erro
 	student.Diplomas = []string{}
 	student.IPs = []string{}
 
-	bcryptPassword, _ := bcrypt.GenerateFromPassword([]byte(student.Password), bcrypt.DefaultCost)
+	bcryptPassword, _ := bcrypt.GenerateFromPassword([]byte(strings.TrimSpace(strings.ToLower(student.Password))), bcrypt.DefaultCost)
 	student.Password = string(bcryptPassword)
 
-	groupRepo := mongodb.NewRepository[models.GroupsModel, models.GroupsWithTeacherModel](db.Collection(GroupCollection))
+	groupRepo := mongodb.NewRepository[models.GroupsModel, models.GroupsWithTeacherModel](db.Collection(constants.GroupCollection))
 	_, err = groupRepo.FindOne(context.Background(), bson.M{"_id": student.Group})
 	if err != nil {
-		return nil, fmt.Errorf("%s", messages.ErrGroupNotFound)
+		return nil, fmt.Errorf("%s", constants.ErrGroupNotFound)
 	}
 
-	statusRepo := mongodb.NewRepository[models.StatusesModel, interface{}](db.Collection(StatusCollection))
+	statusRepo := mongodb.NewRepository[models.StatusesModel, interface{}](db.Collection(constants.StatusCollection))
 	_, err = statusRepo.FindOne(context.Background(), bson.M{"_id": student.Status})
 	if err != nil {
-		return nil, fmt.Errorf("%s", messages.ErrStatusNotFound)
+		return nil, fmt.Errorf("%s", constants.ErrStatusNotFound)
 	}
 
-	studentRepo := mongodb.NewRepository[models.StudentsModel, models.StudentsWithGroupAndStatusModel](db.Collection(StudentCollection))
+	studentRepo := mongodb.NewRepository[models.StudentsModel, models.StudentsWithGroupAndStatusModel](db.Collection(constants.StudentCollection))
 	studentID, err := studentRepo.InsertOne(context.Background(), &student)
 	if err != nil {
 		return nil, err
@@ -77,7 +79,7 @@ func ReadStudents(db *mongo.Database) (interface{}, []string, interface{}, error
 	pipeline := []bson.M{
 		{
 			"$lookup": bson.M{
-				"from":         "groups",
+				"from":         constants.GroupCollection,
 				"localField":   "group",
 				"foreignField": "_id",
 				"as":           "groupData",
@@ -85,7 +87,7 @@ func ReadStudents(db *mongo.Database) (interface{}, []string, interface{}, error
 		},
 		{
 			"$lookup": bson.M{
-				"from":         "statuses",
+				"from":         constants.StatusCollection,
 				"localField":   "status",
 				"foreignField": "_id",
 				"as":           "statusData",
@@ -113,7 +115,7 @@ func ReadStudents(db *mongo.Database) (interface{}, []string, interface{}, error
 		},
 	}
 
-	studentRepo := mongodb.NewRepository[models.StudentsModel, models.StudentsWithGroupAndStatusModel](db.Collection(StudentCollection))
+	studentRepo := mongodb.NewRepository[models.StudentsModel, models.StudentsWithGroupAndStatusModel](db.Collection(constants.StudentCollection))
 	studentAggregate, err := studentRepo.AggregateAll(context.Background(), pipeline)
 	if err != nil {
 		return nil, nil, nil, err
@@ -124,12 +126,12 @@ func ReadStudents(db *mongo.Database) (interface{}, []string, interface{}, error
 	header = FilterHeaders(header, []string{"ID", "Telegram", "Diplomas", "IPs"})
 
 	var selectResult models.SelectModels
-	err = SelectData(db, GroupCollection, &selectResult)
+	err = SelectData(db, constants.GroupCollection, &selectResult)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("%v", err)
 	}
 
-	err = SelectData(db, StatusCollection, &selectResult)
+	err = SelectData(db, constants.StatusCollection, &selectResult)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("%v", err)
 	}

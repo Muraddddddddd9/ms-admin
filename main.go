@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"ms-admin/api/constants"
 	"ms-admin/api/handlers"
-	"ms-admin/api/messages"
 	loconfig "ms-admin/config"
 
 	"github.com/Muraddddddddd9/ms-database/data/mongodb"
@@ -17,13 +17,13 @@ import (
 func main() {
 	db, err := mongodb.Connect()
 	if err == nil {
-		log.Println(messages.SuccConnectMongo)
+		log.Println(constants.SuccConnectMongo)
 	}
 	defer db.Client().Disconnect(context.Background())
 
 	rdb, err := redis.Connect()
 	if err == nil {
-		log.Println(messages.SuccConnectRedis)
+		log.Println(constants.SuccConnectRedis)
 	}
 	defer rdb.Close()
 
@@ -61,5 +61,6 @@ func main() {
 		return handlers.DeleteData(c, db)
 	})
 
-	app.Listen(fmt.Sprintf("localhost%v", cfg.PROJECT_PORT))
+	// app.Listen(fmt.Sprintf("localhost%v", cfg.PROJECT_PORT))
+	app.Listen(fmt.Sprintf("%v", cfg.PROJECT_PORT))
 }

@@ -2,7 +2,7 @@ package loconfig
 
 import (
 	"fmt"
-	"ms-admin/api/messages"
+	"ms-admin/api/constants"
 
 	"github.com/Muraddddddddd9/ms-database/config"
 	"github.com/joho/godotenv"
@@ -20,7 +20,7 @@ type LocalConfig struct {
 func LoadLocalConfig() (*LocalConfig, error) {
 	err := godotenv.Load()
 	if err != nil {
-		return nil, fmt.Errorf(messages.ErrLoadEnv)
+		return nil, fmt.Errorf(constants.ErrLoadEnv)
 	}
 
 	return &LocalConfig{

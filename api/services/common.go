@@ -3,7 +3,7 @@ package services
 import (
 	"context"
 	"fmt"
-	"ms-admin/api/messages"
+	"ms-admin/api/constants"
 	"reflect"
 
 	"github.com/Muraddddddddd9/ms-database/models"
@@ -15,7 +15,7 @@ func CheckReplica(db *mongo.Database, collection string, filter bson.M) error {
 	var result any
 	err := db.Collection(collection).FindOne(context.Background(), filter).Decode(&result)
 	if err == nil {
-		return fmt.Errorf("%s", messages.ErrDataAlreadyExists)
+		return fmt.Errorf("%s", constants.ErrDataAlreadyExists)
 	}
 
 	return nil
@@ -65,13 +65,13 @@ func SelectData(db *mongo.Database, collection string, selectResult *models.Sele
 
 	var res interface{}
 	switch collection {
-	case "objects":
+	case constants.ObjectCollection:
 		res = &selectResult.Objects
-	case "groups":
+	case constants.GroupCollection:
 		res = &selectResult.Groups
-	case "teachers":
+	case constants.TeacherCollection:
 		res = &selectResult.Teachers
-	case "statuses":
+	case constants.StatusCollection:
 		res = &selectResult.Statuses
 	}
 
@@ -86,7 +86,7 @@ func SelectData(db *mongo.Database, collection string, selectResult *models.Sele
 func CheckDataOtherTable(db *mongo.Database, collection string, filter bson.M) error {
 	err := db.Collection(collection).FindOne(context.Background(), filter).Err()
 	if err == nil {
-		return fmt.Errorf(messages.ErrDataInCollection, collection)
+		return fmt.Errorf(constants.ErrDataInCollection, collection)
 	}
 	if err == mongo.ErrNoDocuments {
 		return nil

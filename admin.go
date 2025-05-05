@@ -4,16 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"ms-admin/api/messages"
+	"ms-admin/api/constants"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/redis/go-redis/v9"
 )
 
 const (
-	UserKeyStart        = "user:%s"
 	SessionKeyStart     = "session:%s"
-	SessionSetKeyStart  = "user_sessions:%s"
 	RedirectPathProfile = "/profile"
 )
 
@@ -26,12 +24,12 @@ func AdminOnly(rdb *redis.Client) fiber.Handler {
 		userKey, err := rdb.Get(context.Background(), sessionKey).Result()
 		if err == redis.Nil || userKey == "" {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-				"message":  messages.ErrSessionNotFound,
+				"message":  constants.ErrSessionNotFound,
 				"redirect": RedirectPathProfile,
 			})
 		} else if err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"message":  messages.ErrServerError,
+				"message":  constants.ErrServerError,
 				"redirect": RedirectPathProfile,
 			})
 		}
@@ -39,12 +37,12 @@ func AdminOnly(rdb *redis.Client) fiber.Handler {
 		userData, err := rdb.Get(context.Background(), userKey).Bytes()
 		if err == redis.Nil || userData == nil {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-				"message":  messages.ErrUserNotFound,
+				"message":  constants.ErrUserNotFound,
 				"redirect": RedirectPathProfile,
 			})
 		} else if err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"message":  messages.ErrServerError,
+				"message":  constants.ErrServerError,
 				"redirect": RedirectPathProfile,
 			})
 		}
@@ -55,7 +53,7 @@ func AdminOnly(rdb *redis.Client) fiber.Handler {
 		err = json.Unmarshal(userData, &user)
 		if err != nil {
 			return c.Status(401).JSON(fiber.Map{
-				"message":  messages.ErrGetData,
+				"message":  constants.ErrGetData,
 				"redirect": RedirectPathProfile,
 			})
 		}

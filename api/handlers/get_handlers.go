@@ -2,7 +2,9 @@ package handlers
 
 import (
 	"fmt"
+	"ms-admin/api/constants"
 	"ms-admin/api/services"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -16,20 +18,20 @@ func GetData(c *fiber.Ctx, db *mongo.Database) error {
 	var header []string
 	var err error
 
-	switch collection {
-	case "students":
+	switch strings.TrimSpace(collection) {
+	case constants.StudentCollection:
 		data, header, selectData, err = services.ReadStudents(db)
-	case "teachers":
+	case constants.TeacherCollection:
 		data, header, selectData, err = services.ReadTeachers(db)
-	case "groups":
+	case constants.GroupCollection:
 		data, header, selectData, err = services.ReadGroups(db)
-	case "objects":
+	case constants.ObjectCollection:
 		data, header, err = services.ReadObjects(db)
-	case "objects_groups":
+	case constants.ObjectGroupCollection:
 		data, header, selectData, err = services.ReadObjectsGroups(db)
-	case "statuses":
+	case constants.StatusCollection:
 		data, header, err = services.ReadStatuses(db)
-	case "logs":
+	case constants.LogsCollection:
 		data, header, err = services.ReadLogs(db)
 	}
 

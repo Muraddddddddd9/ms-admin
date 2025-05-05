@@ -5,16 +5,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"ms-admin/api/messages"
+	"ms-admin/api/constants"
+	"strings"
 
 	"github.com/Muraddddddddd9/ms-database/data/mongodb"
 	"github.com/Muraddddddddd9/ms-database/models"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
-)
-
-var (
-	ObjectCollection = "objects"
 )
 
 func CreateObjects(db *mongo.Database, data json.RawMessage) (interface{}, error) {
@@ -23,8 +20,10 @@ func CreateObjects(db *mongo.Database, data json.RawMessage) (interface{}, error
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&object); err != nil {
-		return nil, fmt.Errorf("%v: %v", messages.ErrInvalidDataObject, err)
+		return nil, fmt.Errorf("%v: %v", constants.ErrInvalidDataObject, err)
 	}
+
+	object.Object = strings.TrimSpace(strings.ToLower(object.Object))
 
 	fileds := map[string]string{
 		"object": object.Object,
@@ -32,16 +31,16 @@ func CreateObjects(db *mongo.Database, data json.RawMessage) (interface{}, error
 
 	for name, value := range fileds {
 		if value == "" {
-			return nil, fmt.Errorf(messages.ErrFieldCannotEmpty, name)
+			return nil, fmt.Errorf(constants.ErrFieldCannotEmpty, name)
 		}
 	}
 
-	err := CheckReplica(db, ObjectCollection, bson.M{"object": object.Object})
+	err := CheckReplica(db, constants.ObjectCollection, bson.M{"object": object.Object})
 	if err != nil {
 		return nil, fmt.Errorf("%s", err)
 	}
 
-	objectRepo := mongodb.NewRepository[models.ObjectsModel, interface{}](db.Collection(ObjectCollection))
+	objectRepo := mongodb.NewRepository[models.ObjectsModel, interface{}](db.Collection(constants.ObjectCollection))
 	objectID, err := objectRepo.InsertOne(context.Background(), &object)
 	if err != nil {
 		return nil, err
@@ -51,7 +50,7 @@ func CreateObjects(db *mongo.Database, data json.RawMessage) (interface{}, error
 }
 
 func ReadObjects(db *mongo.Database) (interface{}, []string, error) {
-	objectRepo := mongodb.NewRepository[models.ObjectsModel, interface{}](db.Collection(ObjectCollection))
+	objectRepo := mongodb.NewRepository[models.ObjectsModel, interface{}](db.Collection(constants.ObjectCollection))
 	objectFind, err := objectRepo.FindAll(context.Background(), bson.M{})
 	if err != nil {
 		return nil, nil, err
