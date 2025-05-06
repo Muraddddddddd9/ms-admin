@@ -24,11 +24,11 @@ func CreateStudents(db *mongo.Database, data json.RawMessage) (interface{}, erro
 		return nil, fmt.Errorf("%v: %v", constants.ErrInvalidDataStudent, err)
 	}
 
-	student.Name = strings.TrimSpace(strings.ToLower(student.Name))
-	student.Surname = strings.TrimSpace(strings.ToLower(student.Surname))
-	student.Patronymic = strings.TrimSpace(strings.ToLower(student.Patronymic))
+	student.Name = strings.TrimSpace(student.Name)
+	student.Surname = strings.TrimSpace(student.Surname)
+	student.Patronymic = strings.TrimSpace(student.Patronymic)
 	student.Email = strings.TrimSpace(strings.ToLower(student.Email))
-	student.Email = strings.TrimSpace(student.Password)
+	student.Password = strings.TrimSpace(student.Password)
 
 	fields := map[string]string{
 		"name":       student.Name,
