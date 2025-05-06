@@ -16,10 +16,6 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-const (
-	AdminCreate = "админ"
-)
-
 func CreateAdmin(db *mongo.Database, cfg *loconfig.LocalConfig, statusID primitive.ObjectID) error {
 	hashedPassword, err := bcrypt.GenerateFromPassword(
 		[]byte(cfg.ADMIN_PASSWORD),
@@ -64,9 +60,9 @@ func CreateStartAdmin(db *mongo.Database, cfg *loconfig.LocalConfig) error {
 
 	var newAdminId interface{}
 	statuseRepo := mongodb.NewRepository[models.StatusesModel, interface{}](db.Collection(constants.StatusCollection))
-	if adminID, err := statuseRepo.FindOne(context.Background(), bson.M{"status": AdminCreate}); err != nil {
+	if adminID, err := statuseRepo.FindOne(context.Background(), bson.M{"status": constants.AdminCreate}); err != nil {
 		if err == mongo.ErrNoDocuments {
-			newAdminId, err = statuseRepo.InsertOne(context.Background(), &models.StatusesModel{Status: AdminCreate})
+			newAdminId, err = statuseRepo.InsertOne(context.Background(), &models.StatusesModel{Status: constants.AdminCreate})
 			if err != nil {
 				return fmt.Errorf(constants.ErrCreateAdminStatus, err)
 			}

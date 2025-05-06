@@ -25,6 +25,8 @@ func DeleteData(c *fiber.Ctx, db *mongo.Database) error {
 		})
 	}
 
+	deleteData.Collection = strings.TrimSpace(strings.ToLower(deleteData.Collection))
+
 	var countNoneDelete int = 0
 	var errFind error
 	var errResult error
@@ -53,9 +55,9 @@ func DeleteData(c *fiber.Ctx, db *mongo.Database) error {
 	for _, v := range deleteData.ID {
 		filter := bson.M{"_id": v}
 
-		if deps, ok := collectionDependencies[strings.TrimSpace(deleteData.Collection)]; ok {
+		if deps, ok := collectionDependencies[deleteData.Collection]; ok {
 			for _, dep := range deps {
-				if errFind = services.CheckDataOtherTable(db, strings.TrimSpace(dep.collection), bson.M{dep.field: v}); errFind != nil {
+				if errFind = services.CheckDataOtherTable(db, dep.collection, bson.M{dep.field: v}); errFind != nil {
 					countNoneDelete++
 					errResult = errFind
 					continue
@@ -66,7 +68,7 @@ func DeleteData(c *fiber.Ctx, db *mongo.Database) error {
 			}
 		}
 
-		_, err := db.Collection(strings.TrimSpace(deleteData.Collection)).DeleteOne(context.Background(), filter)
+		_, err := db.Collection(deleteData.Collection).DeleteOne(context.Background(), filter)
 		if err != nil {
 			services.Logging(db, "/api/admin/delete_data", "POST", "400", deleteData, err.Error())
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{

@@ -98,7 +98,7 @@ func UpdateData(c *fiber.Ctx, db *mongo.Database, rdb *redis.Client) error {
 	}
 
 	if data.Collection == constants.StudentCollection || data.Collection == constants.TeacherCollection {
-		if resSession, _ := rdb.Get(context.Background(), fmt.Sprintf("user:%v", data.ID)).Result(); resSession != "" {
+		if resSession, _ := rdb.Get(context.Background(), fmt.Sprintf(constants.UserKeyStart, data.ID)).Result(); resSession != "" {
 			var userData interface{}
 			var userID string
 
@@ -149,7 +149,7 @@ func UpdateData(c *fiber.Ctx, db *mongo.Database, rdb *redis.Client) error {
 				userID = teacher.ID.Hex()
 			}
 
-			rdb.Set(context.Background(), fmt.Sprintf("user:%v", userID), userData, redis.KeepTTL)
+			rdb.Set(context.Background(), fmt.Sprintf(constants.UserKeyStart, userID), userData, redis.KeepTTL)
 		}
 	}
 

@@ -10,27 +10,22 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-const (
-	SessionKeyStart     = "session:%s"
-	RedirectPathProfile = "/profile"
-)
-
 func AdminOnly(rdb *redis.Client) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		session := c.Cookies("session")
 
-		sessionKey := fmt.Sprintf(SessionKeyStart, session)
+		sessionKey := fmt.Sprintf(constants.SessionKeyStart, session)
 
 		userKey, err := rdb.Get(context.Background(), sessionKey).Result()
 		if err == redis.Nil || userKey == "" {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 				"message":  constants.ErrSessionNotFound,
-				"redirect": RedirectPathProfile,
+				"redirect": constants.RedirectPathProfile,
 			})
 		} else if err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"message":  constants.ErrServerError,
-				"redirect": RedirectPathProfile,
+				"redirect": constants.RedirectPathProfile,
 			})
 		}
 
@@ -38,12 +33,12 @@ func AdminOnly(rdb *redis.Client) fiber.Handler {
 		if err == redis.Nil || userData == nil {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 				"message":  constants.ErrUserNotFound,
-				"redirect": RedirectPathProfile,
+				"redirect": constants.RedirectPathProfile,
 			})
 		} else if err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"message":  constants.ErrServerError,
-				"redirect": RedirectPathProfile,
+				"redirect": constants.RedirectPathProfile,
 			})
 		}
 
@@ -54,13 +49,13 @@ func AdminOnly(rdb *redis.Client) fiber.Handler {
 		if err != nil {
 			return c.Status(401).JSON(fiber.Map{
 				"message":  constants.ErrGetData,
-				"redirect": RedirectPathProfile,
+				"redirect": constants.RedirectPathProfile,
 			})
 		}
 
 		if user.Status != "админ" {
 			return c.Status(301).JSON(fiber.Map{
-				"redirect": RedirectPathProfile,
+				"redirect": constants.RedirectPathProfile,
 			})
 		}
 

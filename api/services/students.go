@@ -28,6 +28,7 @@ func CreateStudents(db *mongo.Database, data json.RawMessage) (interface{}, erro
 	student.Surname = strings.TrimSpace(strings.ToLower(student.Surname))
 	student.Patronymic = strings.TrimSpace(strings.ToLower(student.Patronymic))
 	student.Email = strings.TrimSpace(strings.ToLower(student.Email))
+	student.Email = strings.TrimSpace(student.Password)
 
 	fields := map[string]string{
 		"name":       student.Name,
@@ -43,7 +44,7 @@ func CreateStudents(db *mongo.Database, data json.RawMessage) (interface{}, erro
 		}
 	}
 
-	err := CheckReplica(db, constants.StudentCollection, bson.M{"email": strings.TrimSpace(strings.ToLower(student.Email))})
+	err := CheckReplica(db, constants.StudentCollection, bson.M{"email": student.Email})
 	if err != nil {
 		return nil, fmt.Errorf("%s", err)
 	}
@@ -51,7 +52,7 @@ func CreateStudents(db *mongo.Database, data json.RawMessage) (interface{}, erro
 	student.Diplomas = []string{}
 	student.IPs = []string{}
 
-	bcryptPassword, _ := bcrypt.GenerateFromPassword([]byte(strings.TrimSpace(strings.ToLower(student.Password))), bcrypt.DefaultCost)
+	bcryptPassword, _ := bcrypt.GenerateFromPassword([]byte(student.Password), bcrypt.DefaultCost)
 	student.Password = string(bcryptPassword)
 
 	groupRepo := mongodb.NewRepository[models.GroupsModel, models.GroupsWithTeacherModel](db.Collection(constants.GroupCollection))

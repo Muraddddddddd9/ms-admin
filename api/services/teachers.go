@@ -29,6 +29,7 @@ func CreateTeachers(db *mongo.Database, data json.RawMessage) (interface{}, erro
 	teacher.Surname = strings.TrimSpace(strings.ToLower(teacher.Surname))
 	teacher.Patronymic = strings.TrimSpace(strings.ToLower(teacher.Patronymic))
 	teacher.Email = strings.TrimSpace(strings.ToLower(teacher.Email))
+	teacher.Password = strings.TrimSpace(teacher.Password)
 
 	fields := map[string]string{
 		"name":       teacher.Name,
@@ -44,14 +45,14 @@ func CreateTeachers(db *mongo.Database, data json.RawMessage) (interface{}, erro
 		}
 	}
 
-	err := CheckReplica(db, constants.TeacherCollection, bson.M{"email": strings.TrimSpace(strings.ToLower(teacher.Email))})
+	err := CheckReplica(db, constants.TeacherCollection, bson.M{"email": teacher.Email})
 	if err != nil {
 		return nil, fmt.Errorf("%s", err)
 	}
 
 	teacher.IPs = []string{}
 
-	bcryptPassword, _ := bcrypt.GenerateFromPassword([]byte(strings.TrimSpace(strings.ToLower(teacher.Password))), bcrypt.DefaultCost)
+	bcryptPassword, _ := bcrypt.GenerateFromPassword([]byte(teacher.Password), bcrypt.DefaultCost)
 	teacher.Password = string(bcryptPassword)
 
 	statusRepo := mongodb.NewRepository[models.StatusesModel, interface{}](db.Collection(constants.StatusCollection))
