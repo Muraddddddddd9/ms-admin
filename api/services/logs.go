@@ -22,7 +22,7 @@ func Logging(db *mongo.Database, api, method, status string, data any, errData a
 		Date:   time.Now().Local().Format("2006-01-02 15:04:05 MST"),
 		Error:  errData,
 	}
-	logRepo := mongodb.NewRepository[models.Log, interface{}](db.Collection(constants.LogsCollection))
+	logRepo := mongodb.NewRepository[models.Log, struct{}](db.Collection(constants.LogsCollection))
 	_, err := logRepo.InsertOne(context.Background(), &document)
 	if err != nil {
 		log.Errorf(constants.ErrDataLogging)
@@ -30,7 +30,7 @@ func Logging(db *mongo.Database, api, method, status string, data any, errData a
 }
 
 func ReadLogs(db *mongo.Database) (interface{}, []string, error) {
-	logRepo := mongodb.NewRepository[models.Log, interface{}](db.Collection(constants.LogsCollection))
+	logRepo := mongodb.NewRepository[models.Log, struct{}](db.Collection(constants.LogsCollection))
 
 	sortOpts := options.Find().SetSort(bson.D{{Key: "date", Value: -1}})
 	logFind, err := logRepo.FindAll(context.Background(), bson.M{}, sortOpts)

@@ -25,7 +25,7 @@ func CreateAdmin(db *mongo.Database, cfg *loconfig.LocalConfig, statusID primiti
 		return fmt.Errorf(constants.ErrHashPassword, err)
 	}
 
-	teacherRepo := mongodb.NewRepository[models.TeachersModel, models.TeachersWithStatusModel](db.Collection(constants.TeacherCollection))
+	teacherRepo := mongodb.NewRepository[models.TeachersModel, struct{}](db.Collection(constants.TeacherCollection))
 	if _, err := teacherRepo.FindOne(context.Background(), bson.M{"email": cfg.ADMIN_EMAIL}); err != nil {
 		if err == mongo.ErrNoDocuments {
 			document := models.TeachersModel{
@@ -59,7 +59,7 @@ func CreateStartAdmin(db *mongo.Database, cfg *loconfig.LocalConfig) error {
 	}
 
 	var newAdminId interface{}
-	statuseRepo := mongodb.NewRepository[models.StatusesModel, interface{}](db.Collection(constants.StatusCollection))
+	statuseRepo := mongodb.NewRepository[models.StatusesModel, struct{}](db.Collection(constants.StatusCollection))
 	if adminID, err := statuseRepo.FindOne(context.Background(), bson.M{"status": constants.AdminCreate}); err != nil {
 		if err == mongo.ErrNoDocuments {
 			newAdminId, err = statuseRepo.InsertOne(context.Background(), &models.StatusesModel{Status: constants.AdminCreate})

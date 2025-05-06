@@ -104,13 +104,13 @@ func UpdateData(c *fiber.Ctx, db *mongo.Database, rdb *redis.Client) error {
 
 			switch data.Collection {
 			case constants.StudentCollection:
-				studentRepo := mongodb.NewRepository[models.StudentsModel, models.StudentsWithGroupAndStatusModel](db.Collection(constants.StudentCollection))
+				studentRepo := mongodb.NewRepository[models.StudentsModel, struct{}](db.Collection(constants.StudentCollection))
 				student, _ := studentRepo.FindOne(context.Background(), filter)
 
-				groupRepo := mongodb.NewRepository[models.GroupsModel, models.GroupsWithTeacherModel](db.Collection(constants.GroupCollection))
+				groupRepo := mongodb.NewRepository[models.GroupsModel, struct{}](db.Collection(constants.GroupCollection))
 				group, _ := groupRepo.FindOne(context.Background(), bson.M{"_id": student.Group})
 
-				statusRepo := mongodb.NewRepository[models.StatusesModel, interface{}](db.Collection(constants.StatusCollection))
+				statusRepo := mongodb.NewRepository[models.StatusesModel, struct{}](db.Collection(constants.StatusCollection))
 				status, _ := statusRepo.FindOne(context.Background(), bson.M{"_id": student.Status})
 
 				userData, _ = json.Marshal(models.StudentsWithGroupAndStatusModel{
@@ -128,10 +128,10 @@ func UpdateData(c *fiber.Ctx, db *mongo.Database, rdb *redis.Client) error {
 				})
 				userID = student.ID.Hex()
 			case constants.TeacherCollection:
-				teacherRepo := mongodb.NewRepository[models.StudentsModel, models.StudentsWithGroupAndStatusModel](db.Collection(constants.TeacherCollection))
+				teacherRepo := mongodb.NewRepository[models.StudentsModel, struct{}](db.Collection(constants.TeacherCollection))
 				teacher, _ := teacherRepo.FindOne(context.Background(), filter)
 
-				statusRepo := mongodb.NewRepository[models.StatusesModel, interface{}](db.Collection(constants.StatusCollection))
+				statusRepo := mongodb.NewRepository[models.StatusesModel, struct{}](db.Collection(constants.StatusCollection))
 				status, _ := statusRepo.FindOne(context.Background(), bson.M{"_id": teacher.Group})
 
 				userData, _ = json.Marshal(models.StudentsWithGroupAndStatusModel{

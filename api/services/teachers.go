@@ -55,13 +55,13 @@ func CreateTeachers(db *mongo.Database, data json.RawMessage) (interface{}, erro
 	bcryptPassword, _ := bcrypt.GenerateFromPassword([]byte(teacher.Password), bcrypt.DefaultCost)
 	teacher.Password = string(bcryptPassword)
 
-	statusRepo := mongodb.NewRepository[models.StatusesModel, interface{}](db.Collection(constants.StatusCollection))
+	statusRepo := mongodb.NewRepository[models.StatusesModel, struct{}](db.Collection(constants.StatusCollection))
 	_, err = statusRepo.FindOne(context.Background(), bson.M{"_id": teacher.Status})
 	if err != nil {
 		return nil, fmt.Errorf("%s", constants.ErrStatusNotFound)
 	}
 
-	teacherRepo := mongodb.NewRepository[models.TeachersModel, models.TeachersWithStatusModel](db.Collection(constants.TeacherCollection))
+	teacherRepo := mongodb.NewRepository[models.TeachersModel, struct{}](db.Collection(constants.TeacherCollection))
 	teacherId, err := teacherRepo.InsertOne(context.Background(), &teacher)
 	if err != nil {
 		return nil, err
@@ -97,7 +97,7 @@ func ReadTeachers(db *mongo.Database) (interface{}, []string, interface{}, error
 		},
 	}
 
-	teacherRepo := mongodb.NewRepository[models.TeachersModel, models.TeachersWithStatusModel](db.Collection(constants.TeacherCollection))
+	teacherRepo := mongodb.NewRepository[struct{}, models.TeachersWithStatusModel](db.Collection(constants.TeacherCollection))
 	teacherAggregate, err := teacherRepo.AggregateAll(context.Background(), pipeline)
 	if err != nil {
 		return nil, nil, nil, err

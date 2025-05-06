@@ -40,7 +40,7 @@ func CreateObjects(db *mongo.Database, data json.RawMessage) (interface{}, error
 		return nil, fmt.Errorf("%s", err)
 	}
 
-	objectRepo := mongodb.NewRepository[models.ObjectsModel, interface{}](db.Collection(constants.ObjectCollection))
+	objectRepo := mongodb.NewRepository[models.ObjectsModel, struct{}](db.Collection(constants.ObjectCollection))
 	objectID, err := objectRepo.InsertOne(context.Background(), &object)
 	if err != nil {
 		return nil, err
@@ -50,7 +50,7 @@ func CreateObjects(db *mongo.Database, data json.RawMessage) (interface{}, error
 }
 
 func ReadObjects(db *mongo.Database) (interface{}, []string, error) {
-	objectRepo := mongodb.NewRepository[models.ObjectsModel, interface{}](db.Collection(constants.ObjectCollection))
+	objectRepo := mongodb.NewRepository[models.ObjectsModel, struct{}](db.Collection(constants.ObjectCollection))
 	objectFind, err := objectRepo.FindAll(context.Background(), bson.M{})
 	if err != nil {
 		return nil, nil, err

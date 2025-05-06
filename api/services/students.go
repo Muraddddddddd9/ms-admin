@@ -55,19 +55,19 @@ func CreateStudents(db *mongo.Database, data json.RawMessage) (interface{}, erro
 	bcryptPassword, _ := bcrypt.GenerateFromPassword([]byte(student.Password), bcrypt.DefaultCost)
 	student.Password = string(bcryptPassword)
 
-	groupRepo := mongodb.NewRepository[models.GroupsModel, models.GroupsWithTeacherModel](db.Collection(constants.GroupCollection))
+	groupRepo := mongodb.NewRepository[models.GroupsModel, struct{}](db.Collection(constants.GroupCollection))
 	_, err = groupRepo.FindOne(context.Background(), bson.M{"_id": student.Group})
 	if err != nil {
 		return nil, fmt.Errorf("%s", constants.ErrGroupNotFound)
 	}
 
-	statusRepo := mongodb.NewRepository[models.StatusesModel, interface{}](db.Collection(constants.StatusCollection))
+	statusRepo := mongodb.NewRepository[models.StatusesModel, struct{}](db.Collection(constants.StatusCollection))
 	_, err = statusRepo.FindOne(context.Background(), bson.M{"_id": student.Status})
 	if err != nil {
 		return nil, fmt.Errorf("%s", constants.ErrStatusNotFound)
 	}
 
-	studentRepo := mongodb.NewRepository[models.StudentsModel, models.StudentsWithGroupAndStatusModel](db.Collection(constants.StudentCollection))
+	studentRepo := mongodb.NewRepository[models.StudentsModel, struct{}](db.Collection(constants.StudentCollection))
 	studentID, err := studentRepo.InsertOne(context.Background(), &student)
 	if err != nil {
 		return nil, err
@@ -116,7 +116,7 @@ func ReadStudents(db *mongo.Database) (interface{}, []string, interface{}, error
 		},
 	}
 
-	studentRepo := mongodb.NewRepository[models.StudentsModel, models.StudentsWithGroupAndStatusModel](db.Collection(constants.StudentCollection))
+	studentRepo := mongodb.NewRepository[struct{}, models.StudentsWithGroupAndStatusModel](db.Collection(constants.StudentCollection))
 	studentAggregate, err := studentRepo.AggregateAll(context.Background(), pipeline)
 	if err != nil {
 		return nil, nil, nil, err

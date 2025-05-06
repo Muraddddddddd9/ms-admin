@@ -40,7 +40,7 @@ func CreateStatuses(db *mongo.Database, data json.RawMessage) (interface{}, erro
 		return nil, fmt.Errorf("%s", err)
 	}
 
-	statusRepo := mongodb.NewRepository[models.StatusesModel, interface{}](db.Collection(constants.StatusCollection))
+	statusRepo := mongodb.NewRepository[models.StatusesModel, struct{}](db.Collection(constants.StatusCollection))
 	statusID, err := statusRepo.InsertOne(context.Background(), &status)
 	if err != nil {
 		return nil, err
@@ -50,7 +50,7 @@ func CreateStatuses(db *mongo.Database, data json.RawMessage) (interface{}, erro
 }
 
 func ReadStatuses(db *mongo.Database) (interface{}, []string, error) {
-	statusRepo := mongodb.NewRepository[models.StatusesModel, interface{}](db.Collection(constants.StatusCollection))
+	statusRepo := mongodb.NewRepository[models.StatusesModel, struct{}](db.Collection(constants.StatusCollection))
 	statusFind, err := statusRepo.FindAll(context.Background(), bson.M{})
 	if err != nil {
 		return nil, nil, err

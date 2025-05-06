@@ -27,25 +27,25 @@ func CreateObjectsGroups(db *mongo.Database, data json.RawMessage) (interface{},
 		return nil, fmt.Errorf("%s", err)
 	}
 
-	objectRepo := mongodb.NewRepository[models.ObjectsModel, interface{}](db.Collection(constants.ObjectCollection))
+	objectRepo := mongodb.NewRepository[models.ObjectsModel, struct{}](db.Collection(constants.ObjectCollection))
 	_, err = objectRepo.FindOne(context.Background(), bson.M{"_id": objectsGroups.Object})
 	if err != nil {
 		return nil, fmt.Errorf("%s", constants.ErrObjectNotFound)
 	}
 
-	groupRepo := mongodb.NewRepository[models.GroupsModel, models.GroupsWithTeacherModel](db.Collection(constants.GroupCollection))
+	groupRepo := mongodb.NewRepository[models.GroupsModel, struct{}](db.Collection(constants.GroupCollection))
 	_, err = groupRepo.FindOne(context.Background(), bson.M{"_id": objectsGroups.Group})
 	if err != nil {
 		return nil, fmt.Errorf("%s", constants.ErrGroupNotFound)
 	}
 
-	teacherRepo := mongodb.NewRepository[models.TeachersModel, models.TeachersWithStatusModel](db.Collection(constants.TeacherCollection))
+	teacherRepo := mongodb.NewRepository[models.TeachersModel, struct{}](db.Collection(constants.TeacherCollection))
 	_, err = teacherRepo.FindOne(context.Background(), bson.M{"_id": objectsGroups.Teacher})
 	if err != nil {
 		return nil, fmt.Errorf("%s", constants.ErrTeacherNotFound)
 	}
 
-	objectGroupRepo := mongodb.NewRepository[models.ObjectsGroupsModel, models.ObjectsGroupsWithGroupAndTeacherModel](db.Collection(constants.ObjectGroupCollection))
+	objectGroupRepo := mongodb.NewRepository[models.ObjectsGroupsModel, struct{}](db.Collection(constants.ObjectGroupCollection))
 	objectGroupID, err := objectGroupRepo.InsertOne(context.Background(), &objectsGroups)
 	if err != nil {
 		return nil, err
@@ -107,7 +107,7 @@ func ReadObjectsGroups(db *mongo.Database) (interface{}, []string, interface{}, 
 		},
 	}
 
-	objectGroupRepo := mongodb.NewRepository[models.ObjectsGroupsModel, models.ObjectsGroupsWithGroupAndTeacherModel](db.Collection(constants.ObjectGroupCollection))
+	objectGroupRepo := mongodb.NewRepository[struct{}, models.ObjectsGroupsWithGroupAndTeacherModel](db.Collection(constants.ObjectGroupCollection))
 	objectGroupAggregate, err := objectGroupRepo.AggregateAll(context.Background(), pipeline)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("%v", err)

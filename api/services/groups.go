@@ -40,13 +40,13 @@ func CreateGroups(db *mongo.Database, data json.RawMessage) (interface{}, error)
 		return nil, fmt.Errorf("%s", err)
 	}
 
-	teacherRepo := mongodb.NewRepository[models.TeachersModel, models.TeachersWithStatusModel](db.Collection(constants.TeacherCollection))
+	teacherRepo := mongodb.NewRepository[models.TeachersModel, struct{}](db.Collection(constants.TeacherCollection))
 	_, err = teacherRepo.FindOne(context.Background(), bson.M{"_id": group.Teacher})
 	if err != nil {
 		return nil, fmt.Errorf("%s", constants.ErrTeacherNotFound)
 	}
 
-	groupRepo := mongodb.NewRepository[models.GroupsModel, models.GroupsWithTeacherModel](db.Collection(constants.GroupCollection))
+	groupRepo := mongodb.NewRepository[models.GroupsModel, struct{}](db.Collection(constants.GroupCollection))
 	groupID, err := groupRepo.InsertOne(context.Background(), &group)
 	if err != nil {
 		return nil, err
@@ -85,7 +85,7 @@ func ReadGroups(db *mongo.Database) (interface{}, []string, interface{}, error) 
 		},
 	}
 
-	groupRepo := mongodb.NewRepository[models.GroupsModel, models.GroupsWithTeacherModel](db.Collection(constants.GroupCollection))
+	groupRepo := mongodb.NewRepository[struct{}, models.GroupsWithTeacherModel](db.Collection(constants.GroupCollection))
 	groupAggregate, err := groupRepo.AggregateAll(context.Background(), pipeline)
 	if err != nil {
 		return nil, nil, nil, err
