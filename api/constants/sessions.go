@@ -1,11 +1,14 @@
 package constants
 
 const (
-	UserKeyStart    = "user:%s"
-	SessionKeyStart = "session:%s"
+	UserKeyStart        = "user:%s"
+	SessionKeyStart     = "session:%s"
 	RedirectPathProfile = "/profile"
 )
 
 const (
-	AdminCreate = "админ"
+	AdminStatusCreate           = "админ"
+	RestrictedAdminStatusCreate = "ограниченный админ"
+	TeacherStatusCreate         = "учитель"
+	StudentStatusCreate         = "студент"
 )

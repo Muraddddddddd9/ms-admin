@@ -16,6 +16,7 @@ const (
 	ErrAdminNotFound     = "Не удалось найти статус 'админ': %v"
 	ErrCreateAdmin       = "Не удалось создать администратора: %v"
 	ErrCheckAdmin        = "Не удалось проверить наличие администратора: %v"
+	ErrCreateStatus      = "Не удалось создать статус: %v. Ошибка: %v\n"
 
 	ErrDeleteData  = "Ошибка в удалении"
 	ErrUpdateData  = "Обновление данных провалилось"

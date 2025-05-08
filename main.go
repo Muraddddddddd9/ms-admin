@@ -37,6 +37,8 @@ func main() {
 		log.Fatal(err)
 	}
 
+	CreateStatusAll(db)
+
 	app := fiber.New()
 	app.Use(cors.New(cors.Config{
 		AllowOrigins:     cfg.ORIGIN_URL,
