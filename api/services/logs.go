@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"ms-admin/api/constants"
+	"ms-admin/api/utils"
 	"time"
 
 	"github.com/Muraddddddddd9/ms-database/data/mongodb"
@@ -29,18 +30,21 @@ func Logging(db *mongo.Database, api, method, status string, data any, errData a
 	}
 }
 
-func ReadLogs(db *mongo.Database) (interface{}, []string, error) {
+func ReadLogs(db *mongo.Database) (map[string]interface{}, error) {
 	logRepo := mongodb.NewRepository[models.Log, struct{}](db.Collection(constants.LogsCollection))
-
 	sortOpts := options.Find().SetSort(bson.D{{Key: "date", Value: -1}})
 	logFind, err := logRepo.FindAll(context.Background(), bson.M{}, sortOpts)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	var structForHead models.Log
-	header := GetFieldNames(structForHead)
-	header = FilterHeaders(header, []string{"ID"})
+	header := utils.GetFieldNames(structForHead)
 
-	return logFind, header, nil
+	arrResult := map[string]interface{}{
+		"data":   logFind,
+		"header": header,
+	}
+
+	return arrResult, nil
 }

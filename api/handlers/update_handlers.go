@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"ms-admin/api/constants"
 	"ms-admin/api/services"
+	"ms-admin/api/utils"
 	"strings"
 
 	"github.com/Muraddddddddd9/ms-database/data/mongodb"
@@ -41,7 +42,7 @@ func UpdateData(c *fiber.Ctx, db *mongo.Database, rdb *redis.Client) error {
 	switch data.Collection {
 	case constants.StudentCollection, constants.TeacherCollection:
 		if data.Label == "email" || data.Label == "telegram" {
-			err = services.CheckReplica(db, data.Collection, bson.M{data.Label: data.NewData})
+			err = utils.CheckReplica(db, data.Collection, bson.M{data.Label: data.NewData})
 		}
 
 		if data.Label == "password" {
@@ -50,15 +51,15 @@ func UpdateData(c *fiber.Ctx, db *mongo.Database, rdb *redis.Client) error {
 		}
 	case constants.StatusCollection:
 		if data.Label == "status" {
-			err = services.CheckReplica(db, data.Collection, bson.M{data.Label: data.NewData})
+			err = utils.CheckReplica(db, data.Collection, bson.M{data.Label: data.NewData})
 		}
 	case constants.ObjectCollection:
 		if data.Label == "object" {
-			err = services.CheckReplica(db, data.Collection, bson.M{data.Label: data.NewData})
+			err = utils.CheckReplica(db, data.Collection, bson.M{data.Label: data.NewData})
 		}
 	case constants.GroupCollection:
 		if data.Label == "group" {
-			err = services.CheckReplica(db, data.Collection, bson.M{data.Label: data.NewData})
+			err = utils.CheckReplica(db, data.Collection, bson.M{data.Label: data.NewData})
 		}
 	}
 
@@ -128,13 +129,13 @@ func UpdateData(c *fiber.Ctx, db *mongo.Database, rdb *redis.Client) error {
 				})
 				userID = student.ID.Hex()
 			case constants.TeacherCollection:
-				teacherRepo := mongodb.NewRepository[models.StudentsModel, struct{}](db.Collection(constants.TeacherCollection))
+				teacherRepo := mongodb.NewRepository[models.TeachersModel, struct{}](db.Collection(constants.TeacherCollection))
 				teacher, _ := teacherRepo.FindOne(context.Background(), filter)
 
 				statusRepo := mongodb.NewRepository[models.StatusesModel, struct{}](db.Collection(constants.StatusCollection))
-				status, _ := statusRepo.FindOne(context.Background(), bson.M{"_id": teacher.Group})
+				status, _ := statusRepo.FindOne(context.Background(), bson.M{"_id": teacher.Status})
 
-				userData, _ = json.Marshal(models.StudentsWithGroupAndStatusModel{
+				userData, _ = json.Marshal(models.TeachersWithStatusModel{
 					ID:         teacher.ID,
 					Name:       teacher.Name,
 					Surname:    teacher.Surname,
@@ -142,7 +143,6 @@ func UpdateData(c *fiber.Ctx, db *mongo.Database, rdb *redis.Client) error {
 					Email:      teacher.Email,
 					Password:   "",
 					Telegram:   teacher.Telegram,
-					Diplomas:   teacher.Diplomas,
 					IPs:        teacher.IPs,
 					Status:     status.Status,
 				})

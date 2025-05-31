@@ -17,6 +17,17 @@ type CreateDataStruct struct {
 	NewData    json.RawMessage `json:"new_data"`
 }
 
+type createFunc func(db *mongo.Database, data json.RawMessage) (interface{}, error)
+
+var handlersMapCreate = map[string]createFunc{
+	constants.StudentCollection:     services.CreateStudents,
+	constants.TeacherCollection:     services.CreateTeachers,
+	constants.GroupCollection:       services.CreateGroups,
+	constants.ObjectCollection:      services.CreateObjects,
+	constants.ObjectGroupCollection: services.CreateObjectsGroups,
+	constants.StatusCollection:      services.CreateStatuses,
+}
+
 func CreateData(c *fiber.Ctx, db *mongo.Database) error {
 	var data CreateDataStruct
 	if err := c.BodyParser(&data); err != nil {
@@ -25,22 +36,14 @@ func CreateData(c *fiber.Ctx, db *mongo.Database) error {
 		})
 	}
 
-	var newId interface{}
-	var err error
-	switch strings.TrimSpace(data.Collection) {
-	case constants.StudentCollection:
-		newId, err = services.CreateStudents(db, data.NewData)
-	case constants.TeacherCollection:
-		newId, err = services.CreateTeachers(db, data.NewData)
-	case constants.GroupCollection:
-		newId, err = services.CreateGroups(db, data.NewData)
-	case constants.ObjectCollection:
-		newId, err = services.CreateObjects(db, data.NewData)
-	case constants.ObjectGroupCollection:
-		newId, err = services.CreateObjectsGroups(db, data.NewData)
-	case constants.StatusCollection:
-		newId, err = services.CreateStatuses(db, data.NewData)
+	handler, exists := handlersMapCreate[strings.TrimSpace(data.Collection)]
+	if !exists {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": constants.ErrCollectionNotFound,
+		})
 	}
+
+	newId, err := handler(db, data.NewData)
 
 	var dataForLog any
 	_ = json.Unmarshal(data.NewData, &dataForLog)

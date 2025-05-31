@@ -6,55 +6,41 @@ import (
 	"encoding/json"
 	"fmt"
 	"ms-admin/api/constants"
+	"ms-admin/api/core"
+	"strings"
 
 	"github.com/Muraddddddddd9/ms-database/data/mongodb"
 	"github.com/Muraddddddddd9/ms-database/models"
+	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
 func CreateObjectsGroups(db *mongo.Database, data json.RawMessage) (interface{}, error) {
 	var objectsGroups models.ObjectsGroupsModel
-
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&objectsGroups); err != nil {
 		return nil, fmt.Errorf("%v: %v", constants.ErrInvalidDataObjectForGroup, err)
 	}
 
-	err := CheckReplica(db, constants.ObjectGroupCollection, bson.M{"object": objectsGroups.Object, "group": objectsGroups.Group})
-	if err != nil {
-		return nil, fmt.Errorf("%s", err)
+	checkReferences := []core.ReferenceCheck{
+		{Collection: constants.ObjectCollection, ID: objectsGroups.Object, ErrMsg: constants.ErrObjectNotFound},
+		{Collection: constants.GroupCollection, ID: objectsGroups.Group, ErrMsg: constants.ErrGroupNotFound},
+		{Collection: constants.TeacherCollection, ID: objectsGroups.Teacher, ErrMsg: constants.ErrTeacherNotFound},
 	}
 
-	objectRepo := mongodb.NewRepository[models.ObjectsModel, struct{}](db.Collection(constants.ObjectCollection))
-	_, err = objectRepo.FindOne(context.Background(), bson.M{"_id": objectsGroups.Object})
-	if err != nil {
-		return nil, fmt.Errorf("%s", constants.ErrObjectNotFound)
-	}
-
-	groupRepo := mongodb.NewRepository[models.GroupsModel, struct{}](db.Collection(constants.GroupCollection))
-	_, err = groupRepo.FindOne(context.Background(), bson.M{"_id": objectsGroups.Group})
-	if err != nil {
-		return nil, fmt.Errorf("%s", constants.ErrGroupNotFound)
-	}
-
-	teacherRepo := mongodb.NewRepository[models.TeachersModel, struct{}](db.Collection(constants.TeacherCollection))
-	_, err = teacherRepo.FindOne(context.Background(), bson.M{"_id": objectsGroups.Teacher})
-	if err != nil {
-		return nil, fmt.Errorf("%s", constants.ErrTeacherNotFound)
-	}
-
-	objectGroupRepo := mongodb.NewRepository[models.ObjectsGroupsModel, struct{}](db.Collection(constants.ObjectGroupCollection))
-	objectGroupID, err := objectGroupRepo.InsertOne(context.Background(), &objectsGroups)
-	if err != nil {
-		return nil, err
-	}
-
-	return objectGroupID, nil
+	return core.CreateDocument[*core.ObjectsGroupsModel](
+		db,
+		data,
+		constants.ObjectGroupCollection,
+		bson.M{"object": objectsGroups.Object, "group": objectsGroups.Group},
+		checkReferences,
+	)
 }
 
-func ReadObjectsGroups(db *mongo.Database) (interface{}, []string, interface{}, error) {
+func ReadObjectsGroups(db *mongo.Database) (map[string]interface{}, error) {
 	pipeline := []bson.M{
 		{
 			"$lookup": bson.M{
@@ -107,31 +93,60 @@ func ReadObjectsGroups(db *mongo.Database) (interface{}, []string, interface{}, 
 		},
 	}
 
-	objectGroupRepo := mongodb.NewRepository[struct{}, models.ObjectsGroupsWithGroupAndTeacherModel](db.Collection(constants.ObjectGroupCollection))
-	objectGroupAggregate, err := objectGroupRepo.AggregateAll(context.Background(), pipeline)
+	return core.ReadAggregateDocument[models.ObjectsGroupsWithGroupAndTeacherModel](
+		db,
+		constants.ObjectGroupCollection,
+		pipeline,
+		[]string{"ID"},
+		[]string{constants.TeacherCollection, constants.ObjectCollection, constants.GroupCollection},
+	)
+}
+
+func GetAllObject(c *fiber.Ctx, db *mongo.Database) error {
+	group := strings.TrimSpace(c.Params("group"))
+	groupID, err := primitive.ObjectIDFromHex(group)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("%v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": constants.ErrServerError,
+		})
 	}
 
-	var structForHead models.ObjectsGroupsWithGroupAndTeacherModel
-	header := GetFieldNames(structForHead)
-	header = FilterHeaders(header, []string{"ID"})
-
-	var selectResult models.SelectModels
-	err = SelectData(db, constants.ObjectCollection, &selectResult)
-	if err != nil {
-		return nil, nil, nil, fmt.Errorf("%v", err)
+	objectsGroupRepo := mongodb.NewRepository[struct{}, models.ObjectsGroupsWithGroupAndTeacherModel](db.Collection(constants.ObjectGroupCollection))
+	pipeline := []bson.M{
+		{
+			"$match": bson.M{
+				"group": groupID,
+			},
+		},
+		{
+			"$lookup": bson.M{
+				"from":         constants.ObjectCollection,
+				"localField":   "object",
+				"foreignField": "_id",
+				"as":           "objectData",
+			},
+		},
+		{
+			"$unwind": "$objectData",
+		},
+		{
+			"$project": bson.M{
+				"_id":     1,
+				"object":  "$objectData.object",
+				"group":   1,
+				"teacher": 1,
+			},
+		},
 	}
 
-	err = SelectData(db, constants.GroupCollection, &selectResult)
+	objectsAggregateAll, err := objectsGroupRepo.AggregateAll(context.Background(), pipeline)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("%v", err)
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"message": constants.ErrObjectNotFound,
+		})
 	}
 
-	err = SelectData(db, constants.TeacherCollection, &selectResult)
-	if err != nil {
-		return nil, nil, nil, fmt.Errorf("%v", err)
-	}
-
-	return objectGroupAggregate, header, selectResult, nil
+	return c.Status(fiber.StatusAccepted).JSON(fiber.Map{
+		"objects": objectsAggregateAll,
+	})
 }

@@ -10,7 +10,7 @@ import (
 )
 
 func CreateStatusAll(db *mongo.Database) {
-	arrStatus := []string{constants.RestrictedAdminStatusCreate, constants.TeacherStatusCreate, constants.StudentStatusCreate}
+	arrStatus := []string{constants.RestrictedAdminStatus, constants.TeacherStatus, constants.StudentStatus}
 	for _, v := range arrStatus {
 		input := map[string]string{"status": v}
 		byteV, err := json.Marshal(input)

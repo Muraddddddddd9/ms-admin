@@ -6,6 +6,7 @@ import (
 	"log"
 	"ms-admin/api/constants"
 	"ms-admin/api/handlers"
+	"ms-admin/api/services"
 	loconfig "ms-admin/config"
 
 	"github.com/Muraddddddddd9/ms-database/data/mongodb"
@@ -47,20 +48,24 @@ func main() {
 		AllowCredentials: true,
 	}))
 
-	app.Post("/api/admin/create_data", AdminOnly(rdb), func(c *fiber.Ctx) error {
+	app.Post("/api/admin/create_data", Access(rdb, []string{constants.AdminStatus}), func(c *fiber.Ctx) error {
 		return handlers.CreateData(c, db)
 	})
 
-	app.Get("/api/admin/get_data/:collection", AdminOnly(rdb), func(c *fiber.Ctx) error {
+	app.Get("/api/admin/get_data/:collection", Access(rdb, []string{constants.AdminStatus}), func(c *fiber.Ctx) error {
 		return handlers.GetData(c, db)
 	})
 
-	app.Patch("/api/admin/update_data", AdminOnly(rdb), func(c *fiber.Ctx) error {
+	app.Patch("/api/admin/update_data", Access(rdb, []string{constants.AdminStatus}), func(c *fiber.Ctx) error {
 		return handlers.UpdateData(c, db, rdb)
 	})
 
-	app.Delete("/api/admin/delete_data", AdminOnly(rdb), func(c *fiber.Ctx) error {
+	app.Delete("/api/admin/delete_data", Access(rdb, []string{constants.AdminStatus}), func(c *fiber.Ctx) error {
 		return handlers.DeleteData(c, db)
+	})
+
+	app.Get("/api/admin/get_all_object/:group", Access(rdb, []string{constants.AdminStatus, constants.RestrictedAdminStatus}), func(c *fiber.Ctx) error {
+		return services.GetAllObject(c, db)
 	})
 
 	// app.Listen(fmt.Sprintf("localhost%v", cfg.PROJECT_PORT))

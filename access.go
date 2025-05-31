@@ -10,10 +10,9 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-func AdminOnly(rdb *redis.Client) fiber.Handler {
+func Access(rdb *redis.Client, arrAccessStatus []string) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		session := c.Cookies("session")
-
 		sessionKey := fmt.Sprintf(constants.SessionKeyStart, session)
 
 		userKey, err := rdb.Get(context.Background(), sessionKey).Result()
@@ -53,10 +52,16 @@ func AdminOnly(rdb *redis.Client) fiber.Handler {
 			})
 		}
 
-		if user.Status != "админ" {
-			return c.Status(301).JSON(fiber.Map{
-				"redirect": constants.RedirectPathProfile,
-			})
+		for i, access := range arrAccessStatus {
+			if user.Status == access {
+				break
+			} else {
+				if i == len(arrAccessStatus) {
+					return c.Status(301).JSON(fiber.Map{
+						"redirect": constants.RedirectPathProfile,
+					})
+				}
+			}
 		}
 
 		return c.Next()

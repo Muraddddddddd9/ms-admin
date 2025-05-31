@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"ms-admin/api/constants"
 	"ms-admin/api/services"
+	"ms-admin/api/utils"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
@@ -57,7 +58,7 @@ func DeleteData(c *fiber.Ctx, db *mongo.Database) error {
 
 		if deps, ok := collectionDependencies[deleteData.Collection]; ok {
 			for _, dep := range deps {
-				if errFind = services.CheckDataOtherTable(db, dep.collection, bson.M{dep.field: v}); errFind != nil {
+				if errFind = utils.CheckDataOtherTable(db, dep.collection, bson.M{dep.field: v}); errFind != nil {
 					countNoneDelete++
 					errResult = errFind
 					continue

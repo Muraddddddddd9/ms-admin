@@ -60,9 +60,9 @@ func CreateStartAdmin(db *mongo.Database, cfg *loconfig.LocalConfig) error {
 
 	var newAdminId interface{}
 	statuseRepo := mongodb.NewRepository[models.StatusesModel, struct{}](db.Collection(constants.StatusCollection))
-	if adminID, err := statuseRepo.FindOne(context.Background(), bson.M{"status": constants.AdminStatusCreate}); err != nil {
+	if adminID, err := statuseRepo.FindOne(context.Background(), bson.M{"status": constants.AdminStatus}); err != nil {
 		if err == mongo.ErrNoDocuments {
-			newAdminId, err = statuseRepo.InsertOne(context.Background(), &models.StatusesModel{Status: constants.AdminStatusCreate})
+			newAdminId, err = statuseRepo.InsertOne(context.Background(), &models.StatusesModel{Status: constants.AdminStatus})
 			if err != nil {
 				return fmt.Errorf(constants.ErrCreateAdminStatus, err)
 			}
