@@ -9,6 +9,7 @@ import (
 	"github.com/Muraddddddddd9/ms-database/models"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 func CheckReplica(db *mongo.Database, collection string, filter bson.M) error {
@@ -57,23 +58,29 @@ func FilterHeaders(headers []string, toRemove []string) []string {
 }
 
 func SelectData(db *mongo.Database, collection string, selectResult *models.SelectModels) error {
-	cursor, err := db.Collection(collection).Find(context.Background(), bson.M{})
+	var res interface{}
+	var optionsFind *options.FindOptions
+
+	switch collection {
+	case constants.ObjectCollection:
+		res = &selectResult.Objects
+		optionsFind = options.Find().SetSort(bson.D{{Key: "object", Value: 1}})
+	case constants.GroupCollection:
+		res = &selectResult.Groups
+		optionsFind = options.Find().SetSort(bson.D{{Key: "group", Value: 1}})
+	case constants.TeacherCollection:
+		res = &selectResult.Teachers
+		optionsFind = options.Find().SetSort(bson.D{{Key: "name", Value: 1}})
+	case constants.StatusCollection:
+		res = &selectResult.Statuses
+		optionsFind = options.Find().SetSort(bson.D{{Key: "status", Value: 1}})
+	}
+
+	cursor, err := db.Collection(collection).Find(context.Background(), bson.M{}, optionsFind)
 	if err != nil {
 		return fmt.Errorf("%v", err)
 	}
 	defer cursor.Close(context.Background())
-
-	var res interface{}
-	switch collection {
-	case constants.ObjectCollection:
-		res = &selectResult.Objects
-	case constants.GroupCollection:
-		res = &selectResult.Groups
-	case constants.TeacherCollection:
-		res = &selectResult.Teachers
-	case constants.StatusCollection:
-		res = &selectResult.Statuses
-	}
 
 	err = cursor.All(context.Background(), res)
 	if err != nil {

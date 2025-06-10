@@ -10,7 +10,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-type getFunc func(db *mongo.Database) (map[string]interface{}, error)
+type getFunc func(db *mongo.Database, page, pageSize int) (map[string]interface{}, error)
 
 var handlersMapGet = map[string]getFunc{
 	constants.StudentCollection:     services.ReadStudents,
@@ -23,6 +23,8 @@ var handlersMapGet = map[string]getFunc{
 
 func GetData(c *fiber.Ctx, db *mongo.Database) error {
 	collection := c.Params("collection")
+	page := c.QueryInt("page")
+	pageSize := c.QueryInt("pageSize")
 
 	handler, exists := handlersMapGet[strings.TrimSpace(collection)]
 	if !exists {
@@ -30,9 +32,9 @@ func GetData(c *fiber.Ctx, db *mongo.Database) error {
 			"message": constants.ErrCollectionNotFound,
 		})
 	}
-	
+
 	var err error
-	data, err := handler(db)
+	data, err := handler(db, page, pageSize)
 
 	if err != nil {
 		services.Logging(db, fmt.Sprintf("/api/admin/get_data/%v", collection), "GET", "400", data, err.Error())

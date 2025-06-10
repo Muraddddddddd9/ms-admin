@@ -8,4 +8,6 @@ const (
 	ObjectGroupCollection = "objects_groups"
 	StatusCollection      = "statuses"
 	LogsCollection        = "logs"
+	EvaluationCollection  = "evaluations"
+	ContestCollection     = "contests"
 )

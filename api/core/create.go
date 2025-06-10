@@ -28,7 +28,6 @@ func CreateDocument[T ValidatableModel](
 	checkReferences []ReferenceCheck,
 ) (interface{}, error) {
 	var model T
-
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&model); err != nil {

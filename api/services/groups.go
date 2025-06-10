@@ -6,10 +6,13 @@ import (
 	"fmt"
 	"ms-admin/api/constants"
 	"ms-admin/api/core"
+	"ms-admin/api/utils"
 	"strings"
 
 	"github.com/Muraddddddddd9/ms-database/models"
+	"github.com/redis/go-redis/v9"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -34,7 +37,7 @@ func CreateGroups(db *mongo.Database, data json.RawMessage) (interface{}, error)
 	)
 }
 
-func ReadGroups(db *mongo.Database) (map[string]interface{}, error) {
+func ReadGroups(db *mongo.Database, page, pageSize int) (map[string]interface{}, error) {
 	pipeline := []bson.M{
 		{
 			"$lookup": bson.M{
@@ -75,5 +78,47 @@ func ReadGroups(db *mongo.Database) (map[string]interface{}, error) {
 		pipeline,
 		[]string{"ID"},
 		[]string{constants.TeacherCollection},
+		page, pageSize,
+	)
+}
+
+func DeleteGroups(db *mongo.Database, collectionName string, ids []primitive.ObjectID) (string, error) {
+	checkReferencesOther := []core.ReferenceCheckOther{
+		{Collection: constants.ObjectGroupCollection, Field: "group"},
+		{Collection: constants.StudentCollection, Field: "group"},
+	}
+
+	return core.DeleteDocument[models.GroupsModel](
+		db,
+		collectionName,
+		ids,
+		checkReferencesOther,
+	)
+}
+
+func UpdateGroups(
+	db *mongo.Database,
+	rdb *redis.Client,
+	collection string,
+	id primitive.ObjectID,
+	label string,
+	newData string,
+) error {
+	if label == "group" {
+		err := utils.CheckReplica(db, constants.GroupCollection, bson.M{label: newData})
+		if err != nil {
+			return err
+		}
+	}
+
+	return core.UpdateDocument[models.GroupsModel, struct{}](
+		db,
+		rdb,
+		id,
+		constants.GroupCollection,
+		label,
+		newData,
+		[]string{"teacher"},
+		nil,
 	)
 }

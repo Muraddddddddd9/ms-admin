@@ -7,11 +7,13 @@ import (
 	"fmt"
 	"ms-admin/api/constants"
 	"ms-admin/api/core"
+	"ms-admin/api/utils"
 	"strings"
 
 	"github.com/Muraddddddddd9/ms-database/data/mongodb"
 	"github.com/Muraddddddddd9/ms-database/models"
 	"github.com/gofiber/fiber/v2"
+	"github.com/redis/go-redis/v9"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -40,7 +42,7 @@ func CreateObjectsGroups(db *mongo.Database, data json.RawMessage) (interface{},
 	)
 }
 
-func ReadObjectsGroups(db *mongo.Database) (map[string]interface{}, error) {
+func ReadObjectsGroups(db *mongo.Database, page, pageSize int) (map[string]interface{}, error) {
 	pipeline := []bson.M{
 		{
 			"$lookup": bson.M{
@@ -91,6 +93,11 @@ func ReadObjectsGroups(db *mongo.Database) (map[string]interface{}, error) {
 				},
 			},
 		},
+		{
+			"$sort": bson.M{
+				"group": 1,
+			},
+		},
 	}
 
 	return core.ReadAggregateDocument[models.ObjectsGroupsWithGroupAndTeacherModel](
@@ -99,6 +106,7 @@ func ReadObjectsGroups(db *mongo.Database) (map[string]interface{}, error) {
 		pipeline,
 		[]string{"ID"},
 		[]string{constants.TeacherCollection, constants.ObjectCollection, constants.GroupCollection},
+		page, pageSize,
 	)
 }
 
@@ -111,7 +119,6 @@ func GetAllObject(c *fiber.Ctx, db *mongo.Database) error {
 		})
 	}
 
-	objectsGroupRepo := mongodb.NewRepository[struct{}, models.ObjectsGroupsWithGroupAndTeacherModel](db.Collection(constants.ObjectGroupCollection))
 	pipeline := []bson.M{
 		{
 			"$match": bson.M{
@@ -139,6 +146,7 @@ func GetAllObject(c *fiber.Ctx, db *mongo.Database) error {
 		},
 	}
 
+	objectsGroupRepo := mongodb.NewRepository[struct{}, models.ObjectsGroupsWithGroupAndTeacherModel](db.Collection(constants.ObjectGroupCollection))
 	objectsAggregateAll, err := objectsGroupRepo.AggregateAll(context.Background(), pipeline)
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
@@ -149,4 +157,57 @@ func GetAllObject(c *fiber.Ctx, db *mongo.Database) error {
 	return c.Status(fiber.StatusAccepted).JSON(fiber.Map{
 		"objects": objectsAggregateAll,
 	})
+}
+
+func DeleteObjectsGroups(db *mongo.Database, collectionName string, ids []primitive.ObjectID) (string, error) {
+	checkReferencesOther := []core.ReferenceCheckOther{
+		{Collection: constants.EvaluationCollection, Field: "object"},
+	}
+
+	return core.DeleteDocument[models.ObjectsGroupsModel](
+		db,
+		collectionName,
+		ids,
+		checkReferencesOther,
+	)
+}
+
+func UpdateObjectsGroups(
+	db *mongo.Database,
+	rdb *redis.Client,
+	collection string,
+	id primitive.ObjectID,
+	label string,
+	newData string,
+) error {
+	objectGroupsRepo := mongodb.NewRepository[models.ObjectsGroupsModel, struct{}](db.Collection(constants.ObjectGroupCollection))
+	objectGroupsFindOne, err := objectGroupsRepo.FindOne(context.Background(), bson.M{"_id": id})
+	if err != nil {
+		return fmt.Errorf(constants.ErrObjectNotFound)
+	}
+
+	if label == "object" {
+		newDataObject, _ := primitive.ObjectIDFromHex(newData)
+		err := utils.CheckReplica(db, constants.ObjectGroupCollection, bson.M{"group": objectGroupsFindOne.Group, label: newDataObject})
+		if err != nil {
+			return err
+		}
+	} else if label == "group" {
+		newDataObject, _ := primitive.ObjectIDFromHex(newData)
+		err := utils.CheckReplica(db, constants.ObjectGroupCollection, bson.M{"object": objectGroupsFindOne.Object, label: newDataObject})
+		if err != nil {
+			return err
+		}
+	}
+
+	return core.UpdateDocument[models.ObjectsGroupsModel, struct{}](
+		db,
+		rdb,
+		id,
+		constants.ObjectGroupCollection,
+		label,
+		newData,
+		[]string{"object", "group", "teacher"},
+		nil,
+	)
 }

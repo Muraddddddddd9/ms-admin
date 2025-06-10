@@ -56,6 +56,10 @@ func main() {
 		return handlers.GetData(c, db)
 	})
 
+	app.Get("/api/admin/get_logs", Access(rdb, []string{constants.AdminStatus}), func(c *fiber.Ctx) error {
+		return services.ReadLogs(c, db)
+	})
+
 	app.Patch("/api/admin/update_data", Access(rdb, []string{constants.AdminStatus}), func(c *fiber.Ctx) error {
 		return handlers.UpdateData(c, db, rdb)
 	})
@@ -67,6 +71,28 @@ func main() {
 	app.Get("/api/admin/get_all_object/:group", Access(rdb, []string{constants.AdminStatus, constants.RestrictedAdminStatus}), func(c *fiber.Ctx) error {
 		return services.GetAllObject(c, db)
 	})
+
+	app.Get("/api/admin/get_collections", Access(rdb, []string{constants.AdminStatus}), func(c *fiber.Ctx) error {
+		return handlers.GetCollections(c, db)
+	})
+
+	app.Post("/api/admin/dump", Access(rdb, []string{constants.AdminStatus}), func(c *fiber.Ctx) error {
+		return handlers.Dump(c, db)
+	})
+
+	app.Post("/api/admin/drop", Access(rdb, []string{constants.AdminStatus}), func(c *fiber.Ctx) error {
+		return handlers.Drop(c, db, cfg)
+	})
+
+	app.Patch("/api/admin/up_group", Access(rdb, []string{constants.AdminStatus}), func(c *fiber.Ctx) error {
+		return handlers.UpGroup(c, db)
+	})
+
+	app.Post("/api/admin/upload", Access(rdb, []string{constants.AdminStatus}), func(c *fiber.Ctx) error {
+		return handlers.Upload(c, db)
+	})
+
+	go runBackups(db)
 
 	// app.Listen(fmt.Sprintf("localhost%v", cfg.PROJECT_PORT))
 	app.Listen(fmt.Sprintf("%v", cfg.PROJECT_PORT))

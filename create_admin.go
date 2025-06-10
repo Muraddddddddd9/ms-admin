@@ -34,6 +34,7 @@ func CreateAdmin(db *mongo.Database, cfg *loconfig.LocalConfig, statusID primiti
 				Patronymic: "Admin",
 				Email:      cfg.ADMIN_EMAIL,
 				Password:   string(hashedPassword),
+				Telegram:   0,
 				IPs:        []string{},
 				Status:     statusID,
 			}
