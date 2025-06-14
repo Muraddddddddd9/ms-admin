@@ -28,7 +28,7 @@ func runBackups(db *mongo.Database) {
 		dailyTicker := time.NewTicker(24 * time.Hour)
 		for range dailyTicker.C {
 			if err := Backup(db, "day", mainDirBackup); err != nil {
-				log.Printf("Daily backup failed: %v", err)
+				log.Printf(constants.ErrBackUpDay, err)
 			}
 		}
 	}()
@@ -37,7 +37,7 @@ func runBackups(db *mongo.Database) {
 		weeklyTicker := time.NewTicker(168 * time.Hour)
 		for range weeklyTicker.C {
 			if err := Backup(db, "week", mainDirBackup); err != nil {
-				log.Printf("Weekly backup failed: %v", err)
+				log.Printf(constants.ErrBackUpWeek, err)
 			}
 		}
 	}()
@@ -46,7 +46,7 @@ func runBackups(db *mongo.Database) {
 		monthlyTicker := time.NewTicker(720 * time.Hour)
 		for range monthlyTicker.C {
 			if err := Backup(db, "month", mainDirBackup); err != nil {
-				log.Printf("Monthly backup failed: %v", err)
+				log.Printf(constants.ErrBackUpMonth, err)
 			}
 		}
 	}()
@@ -56,7 +56,7 @@ func Backup(db *mongo.Database, backupType, mainDirBackup string) error {
 	bkDir := filepath.Join(mainDirBackup, backupType)
 
 	if err := os.MkdirAll(bkDir, 0755); err != nil {
-		return fmt.Errorf("Ошибка в создании backups-папки: %v", err)
+		return fmt.Errorf(constants.ErrCreateFolderBackup, err)
 	}
 
 	backupFile := filepath.Join(
@@ -66,7 +66,7 @@ func Backup(db *mongo.Database, backupType, mainDirBackup string) error {
 
 	file, err := os.Create(backupFile)
 	if err != nil {
-		return fmt.Errorf("Ошибка при создании бэкап-файла")
+		return fmt.Errorf(constants.ErrCreateFileBackup, err)
 	}
 	defer file.Close()
 
@@ -78,16 +78,16 @@ func Backup(db *mongo.Database, backupType, mainDirBackup string) error {
 
 	collections, err := db.ListCollectionNames(context.Background(), bson.M{})
 	if err != nil {
-		return fmt.Errorf("Ошибка в получение списка коллекций")
+		return fmt.Errorf(constants.ErrCollectionsNotFound, err)
 	}
 
 	for _, collectionName := range collections {
 		if err := exportCollection(db, collectionName, tarWriter); err != nil {
-			return fmt.Errorf("Ошибка в экспорте коллеции  %s: %v", collectionName, err)
+			return fmt.Errorf(constants.ErrExportCollection, collectionName, err)
 		}
 	}
 
-	log.Printf("Backup сохранён в: %s", backupFile)
+	log.Printf(constants.SuccUploadBackup, backupFile)
 	return nil
 }
 

@@ -34,6 +34,13 @@ const (
 	ErrStatusNotFound  = "Статус не найден"
 	ErrSessionNotFound = "Сессия не найдена"
 
+	ErrBackUpDay          = "Сбой ежедневного резервного копирования: %v"
+	ErrBackUpWeek         = "Сбой еженедельного резервного копирования: %v"
+	ErrBackUpMonth        = "Сбой ежемесячного резервного копирования: %v"
+	ErrCreateFolderBackup = "Ошибка в создании backups-папки: %v"
+	ErrCreateFileBackup   = "Ошибка при создании бэкап-файла: %v"
+	ErrExportCollection   = "Ошибка в экспорте коллеции  %s: %v"
+
 	ErrInvalidDataStudent        = "Неверные данные студента"
 	ErrInvalidDataTeacher        = "Неверные данные учителя"
 	ErrInvalidDataStatus         = "Неверные данные статуса"
@@ -53,4 +60,5 @@ const (
 	SuccCreateAdmin        = "Администратор создан"
 	SuccAdminAlreadyExists = "Администратор уже существует"
 	SuccUploadFile         = "Файл успешно загружен в базу данных"
+	SuccUploadBackup       = "Backup сохранён в: %s"
 )
