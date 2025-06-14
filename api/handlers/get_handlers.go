@@ -1,9 +1,9 @@
 package handlers
 
 import (
-	"fmt"
 	"ms-admin/api/constants"
 	"ms-admin/api/services"
+	"strconv"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
@@ -37,7 +37,7 @@ func GetData(c *fiber.Ctx, db *mongo.Database) error {
 	data, err := handler(db, page, pageSize)
 
 	if err != nil {
-		services.Logging(db, fmt.Sprintf("/api/admin/get_data/%v", collection), "GET", "400", data, err.Error())
+		services.Logging(db, "/api/admin/get_data", c.Method(), strconv.Itoa(fiber.StatusBadRequest), data, err.Error())
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": err.Error(),
 		})

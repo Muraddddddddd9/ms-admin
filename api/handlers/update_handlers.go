@@ -3,6 +3,7 @@ package handlers
 import (
 	"ms-admin/api/constants"
 	"ms-admin/api/services"
+	"strconv"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
@@ -57,13 +58,13 @@ func UpdateData(c *fiber.Ctx, db *mongo.Database, rdb *redis.Client) error {
 
 	err := handler(db, rdb, data.Collection, data.ID, data.Label, data.NewData)
 	if err != nil {
-		services.Logging(db, "/api/admin/update_data", "POST", "404", data, err)
+		services.Logging(db, "/api/admin/update_data", c.Method(), strconv.Itoa(fiber.StatusNotFound), data, err)
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"message": err.Error(),
 		})
 	}
 
-	services.Logging(db, "/api/admin/update_data", "POST", "202", data, nil)
+	services.Logging(db, "/api/admin/update_data", c.Method(), strconv.Itoa(fiber.StatusAccepted), data, nil)
 	return c.Status(fiber.StatusAccepted).JSON(fiber.Map{
 		"message": constants.SuccDataUpdate,
 	})

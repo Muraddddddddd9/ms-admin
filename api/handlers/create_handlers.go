@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"ms-admin/api/constants"
 	"ms-admin/api/services"
+	"strconv"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
@@ -49,13 +50,13 @@ func CreateData(c *fiber.Ctx, db *mongo.Database) error {
 	_ = json.Unmarshal(data.NewData, &dataForLog)
 
 	if err != nil {
-		services.Logging(db, "/api/admin/create_data", "POST", "400", dataForLog, err.Error())
+		services.Logging(db, "/api/admin/create_data", c.Method(), strconv.Itoa(fiber.StatusBadRequest), dataForLog, err.Error())
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": err.Error(),
 		})
 	}
 
-	services.Logging(db, "/api/admin/create_data", "POST", "202", dataForLog, nil)
+	services.Logging(db, "/api/admin/create_data", c.Method(), strconv.Itoa(fiber.StatusAccepted), dataForLog, nil)
 	return c.Status(fiber.StatusAccepted).JSON(fiber.Map{
 		"message": fmt.Sprintf(constants.SuccDataAdd, newId.(primitive.ObjectID).Hex()),
 	})

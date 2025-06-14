@@ -9,6 +9,7 @@ import (
 	"ms-admin/api/constants"
 	"ms-admin/api/services"
 	loconfig "ms-admin/config"
+	"strconv"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -37,14 +38,14 @@ func Dump(c *fiber.Ctx, db *mongo.Database) error {
 	var collectionsData CollectionStruct
 
 	if err := c.BodyParser(&collectionsData); err != nil {
-		services.Logging(db, "/api/admin/dump", "POST", "400", collectionsData, err)
+		services.Logging(db, "/api/admin/dump", c.Method(), strconv.Itoa(fiber.StatusBadRequest), collectionsData, err)
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": constants.ErrInvalidInput,
 		})
 	}
 
 	if len(collectionsData.Collections) == 0 {
-		services.Logging(db, "/api/admin/dump", "POST", "409", collectionsData, constants.ErrInputCollection)
+		services.Logging(db, "/api/admin/dump", c.Method(), strconv.Itoa(fiber.StatusConflict), collectionsData, constants.ErrInputCollection)
 		return c.Status(fiber.StatusConflict).JSON(fiber.Map{
 			"message": constants.ErrInputCollection,
 		})

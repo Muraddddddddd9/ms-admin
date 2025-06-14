@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strconv"
 	"strings"
 
 	"github.com/Muraddddddddd9/ms-database/models"
@@ -122,14 +123,14 @@ func Upload(c *fiber.Ctx, db *mongo.Database) error {
 
 			_, err = db.Collection(fileName).DeleteMany(context.Background(), bson.M{"status": bson.M{"$ne": constants.AdminStatus}, "email": bson.M{"$ne": cfg.ADMIN_EMAIL}})
 			if err != nil {
-				services.Logging(db, "/api/admin/upload", "POST", "400", fileData, err.Error())
+				services.Logging(db, "/api/admin/upload", c.Method(), strconv.Itoa(fiber.StatusBadRequest), fileData, err.Error())
 				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 					"message": constants.ErrDeleteData,
 				})
 			}
 			_, err = db.Collection(fileName).InsertMany(context.Background(), insertData)
 			if err != nil {
-				services.Logging(db, "/api/admin/upload", "POST", "400", fileData, err.Error())
+				services.Logging(db, "/api/admin/upload", c.Method(), strconv.Itoa(fiber.StatusBadRequest), fileData, err.Error())
 				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 					"message": constants.ErrCreateData,
 				})
@@ -138,7 +139,7 @@ func Upload(c *fiber.Ctx, db *mongo.Database) error {
 		}
 	}
 
-	services.Logging(db, "/api/admin/upload", "POST", "200", fileData, nil)
+	services.Logging(db, "/api/admin/upload", c.Method(), strconv.Itoa(fiber.StatusAccepted), fileData, nil)
 	return c.Status(fiber.StatusAccepted).JSON(fiber.Map{
 		"message": constants.SuccUploadFile,
 	})

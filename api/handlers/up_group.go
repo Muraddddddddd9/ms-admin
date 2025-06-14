@@ -66,7 +66,7 @@ func UpGroup(c *fiber.Ctx, db *mongo.Database) error {
 	groupRepo := mongodb.NewRepository[models.GroupsModel, struct{}](db.Collection(constants.GroupCollection))
 	groupFindAll, err := groupRepo.FindAll(context.Background(), bson.M{})
 	if err != nil {
-		services.Logging(db, "/api/admin/up_group", "PATCH", "400", nil, err.Error())
+		services.Logging(db, "/api/admin/up_group", c.Method(), strconv.Itoa(fiber.StatusBadRequest), nil, err.Error())
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": constants.ErrGroupNotFound,
 		})
@@ -113,13 +113,13 @@ func UpGroup(c *fiber.Ctx, db *mongo.Database) error {
 	}
 
 	if len(errMsg) != 0 {
-		services.Logging(db, "/api/admin/up_group", "PATCH", "400", nil, errMsg)
+		services.Logging(db, "/api/admin/up_group", c.Method(), strconv.Itoa(fiber.StatusBadRequest), nil, errMsg)
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": errMsg,
 		})
 	}
 
-	services.Logging(db, "/api/admin/up_group", "PATCH", "200", nil, constants.SuccGroupUp)
+	services.Logging(db, "/api/admin/up_group", c.Method(), strconv.Itoa(fiber.StatusAccepted), nil, constants.SuccGroupUp)
 	return c.Status(fiber.StatusAccepted).JSON(fiber.Map{
 		"message": constants.SuccGroupUp,
 	})

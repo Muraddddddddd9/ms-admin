@@ -3,6 +3,7 @@ package handlers
 import (
 	"ms-admin/api/constants"
 	"ms-admin/api/services"
+	"strconv"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
@@ -42,7 +43,7 @@ func DeleteData(c *fiber.Ctx, db *mongo.Database) error {
 
 	handler, exists := handlersMapDelete[strings.TrimSpace(deleteData.Collection)]
 	if !exists {
-		services.Logging(db, "/api/admin/delete_data", "POST", "400", deleteData, constants.ErrCollectionNotFound)
+		services.Logging(db, "/api/admin/delete_data", c.Method(), strconv.Itoa(fiber.StatusBadRequest), deleteData, constants.ErrCollectionNotFound)
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": constants.ErrCollectionNotFound,
 		})
@@ -50,13 +51,13 @@ func DeleteData(c *fiber.Ctx, db *mongo.Database) error {
 
 	res, err := handler(db, deleteData.Collection, deleteData.ID)
 	if err != nil {
-		services.Logging(db, "/api/admin/delete_data", "POST", "409", deleteData, err.Error())
+		services.Logging(db, "/api/admin/delete_data", c.Method(), strconv.Itoa(fiber.StatusConflict), deleteData, err.Error())
 		return c.Status(fiber.StatusConflict).JSON(fiber.Map{
 			"message": err.Error(),
 		})
 	}
 
-	services.Logging(db, "/api/admin/delete_data", "POST", "202", deleteData, nil)
+	services.Logging(db, "/api/admin/delete_data", c.Method(), strconv.Itoa(fiber.StatusAccepted), deleteData, nil)
 	return c.Status(fiber.StatusAccepted).JSON(fiber.Map{
 		"message": res,
 	})

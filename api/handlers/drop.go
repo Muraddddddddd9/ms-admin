@@ -6,6 +6,7 @@ import (
 	"ms-admin/api/constants"
 	"ms-admin/api/services"
 	loconfig "ms-admin/config"
+	"strconv"
 
 	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/bson"
@@ -16,14 +17,14 @@ func Drop(c *fiber.Ctx, db *mongo.Database, cfg *loconfig.LocalConfig) error {
 	var collectionsData CollectionStruct
 
 	if err := c.BodyParser(&collectionsData); err != nil {
-		services.Logging(db, "/api/admin/drop", "POST", "400", collectionsData, err)
+		services.Logging(db, "/api/admin/drop", c.Method(), strconv.Itoa(fiber.StatusBadRequest), collectionsData, err)
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": constants.ErrInvalidInput,
 		})
 	}
 
 	if len(collectionsData.Collections) == 0 {
-		services.Logging(db, "/api/admin/drop", "POST", "409", collectionsData, constants.ErrInputCollection)
+		services.Logging(db, "/api/admin/drop", c.Method(), strconv.Itoa(fiber.StatusConflict), collectionsData, constants.ErrInputCollection)
 		return c.Status(fiber.StatusConflict).JSON(fiber.Map{
 			"message": constants.ErrInputCollection,
 		})
@@ -56,13 +57,13 @@ func Drop(c *fiber.Ctx, db *mongo.Database, cfg *loconfig.LocalConfig) error {
 	}
 
 	if len(errMsg) != 0 {
-		services.Logging(db, "/api/admin/drop", "POST", "400", collectionsData, errMsg)
+		services.Logging(db, "/api/admin/drop", c.Method(), strconv.Itoa(fiber.StatusBadRequest), collectionsData, errMsg)
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": errMsg,
 		})
 	}
 
-	services.Logging(db, "/api/admin/drop", "POST", "202", collectionsData, constants.SuccDeleteCollection)
+	services.Logging(db, "/api/admin/drop", c.Method(), strconv.Itoa(fiber.StatusAccepted), collectionsData, constants.SuccDeleteCollection)
 	return c.Status(fiber.StatusAccepted).JSON(fiber.Map{
 		"message": constants.SuccDeleteCollection,
 	})
