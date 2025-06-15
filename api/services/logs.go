@@ -102,11 +102,37 @@ func ReadLogs(c *fiber.Ctx, db *mongo.Database) error {
 		})
 	}
 
+	type onlyApi struct {
+		API string `bson:"api"`
+	}
+	pipelineApi := []bson.M{
+		{
+			"$group": bson.M{
+				"_id": "$api",                    
+				"doc": bson.M{"$first": "$$ROOT"},
+			},
+		},
+		{
+			"$replaceRoot": bson.M{"newRoot": "$doc"},
+		},
+		{
+			"$sort": bson.M{"api": 1},
+		},
+	}
+	apiRepo := mongodb.NewRepository[struct{}, onlyApi](db.Collection(constants.LogsCollection))
+	apiFindAll, err := apiRepo.AggregateAll(context.Background(), pipelineApi)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": err.Error(),
+		})
+	}
+
 	var structForHead models.Log
 	header := utils.GetFieldNames(structForHead)
 	header = utils.FilterHeaders(header, []string{"ID"})
 
 	arrResult := map[string]interface{}{
+		"api":     apiFindAll,
 		"data":    logFind,
 		"header":  header,
 		"hasMore": int64((page * limit)) < total,
