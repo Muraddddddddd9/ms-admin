@@ -11,7 +11,6 @@ import (
 type LocalConfig struct {
 	ORIGIN_URL   string
 	PROJECT_PORT string
-	NGINX_URL    string
 
 	ADMIN_EMAIL    string
 	ADMIN_PASSWORD string
@@ -26,7 +25,6 @@ func LoadLocalConfig() (*LocalConfig, error) {
 	return &LocalConfig{
 		ORIGIN_URL:   config.GetEnv("ORIGIN_URL"),
 		PROJECT_PORT: config.GetEnv("PROJECT_PORT"),
-		NGINX_URL:    config.GetEnv("NGINX_URL"),
 
 		ADMIN_EMAIL:    config.GetEnv("ADMIN_EMAIL"),
 		ADMIN_PASSWORD: config.GetEnv("ADMIN_PASSWORD"),
